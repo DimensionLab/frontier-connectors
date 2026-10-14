@@ -1,0 +1,28 @@
+schema = 1
+id = "vtk"
+kind = "connector"
+name = "VTK"
+summary = "VTK XML, legacy and VTKHDF files, PVD and .series time series"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "Kitware (open format)"
+formats = ["vtk-xml", "vtk-legacy", "vtkhdf", "pvd"]
+maturity = "verified-public-sample"
+licence = "Apache-2.0"
+description = "Reads VTK XML, legacy and VTKHDF files, and PVD and .series time series."
+category = "file-format"
+tags = ["mesh", "visualisation", "open-source"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = ["vtk>=9.3"]
+plugins = []
+suggests = []
+
+[connectors]
+vtk = "frontier_connector_vtk.connector:VtkConnector"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"

@@ -1,0 +1,136 @@
+Catalyst 2 adaptor notes for DimensionLab Frontier
+===================================================
+
+What the Frontier bridge expects is exactly what ParaView Catalyst expects: a Conduit Mesh
+Blueprint tree per channel. An adaptor that already drives ParaView Catalyst needs no change;
+only the pipeline script (or the place the node is sent to) differs.
+
+Catalyst 2 API (https://catalyst-in-situ.readthedocs.io/en/latest/, ParaView protocol:
+https://docs.paraview.org/en/latest/Catalyst/blueprints.html, read 2026-10-10):
+
+  catalyst_initialize(node)   once        node: catalyst/scripts/<name>/{filename,args}
+  catalyst_execute(node)      every step  node: catalyst/state + catalyst/channels
+  catalyst_finalize(node)     once
+
+Environment (instead of catalyst_load/implementation and catalyst_load/search_paths):
+
+  export CATALYST_IMPLEMENTATION_NAME=paraview
+  export CATALYST_IMPLEMENTATION_PATHS=<paraview install>/lib/catalyst
+
+
+1. C++ adaptor (conduit_cpp), unstructured tets, static mesh
+------------------------------------------------------------
+
+  // initialize
+  conduit_cpp::Node node;
+  node["catalyst/scripts/frontier/filename"].set("frontier_catalyst_pipeline.py");
+  node["catalyst/scripts/frontier/args"].append().set("--spool");
+  node["catalyst/scripts/frontier/args"].append().set("run/spool");
+  node["catalyst/scripts/frontier/args"].append().set("--channel");
+  node["catalyst/scripts/frontier/args"].append().set("grid");
+  catalyst_initialize(conduit_cpp::c_node(&node));
+
+  // every output step
+  conduit_cpp::Node exec;
+  exec["catalyst/state/timestep"].set(step);          // integer
+  exec["catalyst/state/time"].set(time);              // float64
+  auto channel = exec["catalyst/channels/grid"];
+  channel["type"].set("mesh");                        // "multimesh": data/<block>/... per block
+  auto mesh = channel["data"];
+  mesh["coordsets/coords/type"].set("explicit");
+  mesh["coordsets/coords/values/x"].set_external(x.data(), n_points);   // zero copy
+  mesh["coordsets/coords/values/y"].set_external(y.data(), n_points);
+  mesh["coordsets/coords/values/z"].set_external(z.data(), n_points);
+  mesh["topologies/mesh/type"].set("unstructured");
+  mesh["topologies/mesh/coordset"].set("coords");
+  mesh["topologies/mesh/elements/shape"].set("tet");  // point line tri quad tet hex wedge pyramid
+  mesh["topologies/mesh/elements/connectivity"].set_external(conn.data(), 4 * n_cells);
+  mesh["fields/p/association"].set("vertex");         // or "element"
+  mesh["fields/p/topology"].set("mesh");
+  mesh["fields/p/values"].set_external(p.data(), n_points);
+  mesh["fields/U/association"].set("vertex");
+  mesh["fields/U/topology"].set("mesh");
+  mesh["fields/U/values/u"].set_external(u.data(), n_points);           // mcarray = vector
+  mesh["fields/U/values/v"].set_external(v.data(), n_points);
+  mesh["fields/U/values/w"].set_external(w.data(), n_points);
+  mesh["fields/p/units"].set("Pa");                   // optional, copied into the dataset
+  catalyst_execute(conduit_cpp::c_node(&exec));
+
+  // end
+  conduit_cpp::Node fin;
+  catalyst_finalize(conduit_cpp::c_node(&fin));
+
+  Uniform grid:      coordsets/coords/type = "uniform", dims/{i,j,k} (points), origin/{x,y,z},
+                     spacing/{dx,dy,dz};  topologies/mesh/type = "uniform"
+  Rectilinear grid:  coordsets/coords/type = "rectilinear", values/{x,y,z} (1-D axes);
+                     topologies/mesh/type = "rectilinear"
+  Curvilinear grid:  explicit coordset + topologies/mesh/type = "structured",
+                     elements/dims/{i,j,k} (cells per axis)
+  Mixed cells:       elements/shape = "mixed", shape_map/{tet: 10, hex: 12, ...}, shapes,
+                     sizes, offsets, connectivity
+  Polygons:          elements/shape = "polygonal", sizes, offsets, connectivity
+  Polyhedra:         elements/shape = "polyhedral" (connectivity = face ids, sizes, offsets) +
+                     subelements/{shape = "polygonal", sizes, offsets, connectivity}
+  Grid field order:  flat, i (x) fastest, then j, then k.
+
+
+2. Fortran adaptor (catalyst_conduit module)
+--------------------------------------------
+
+  (Sketch: routine names follow Catalyst's Fortran wrappers of the Conduit C API; check them
+  against the catalyst_conduit module of your Catalyst version. The paths are what matters.)
+
+  use catalyst_api
+  use catalyst_conduit
+  type(C_PTR) :: exec, mesh
+  exec = catalyst_conduit_node_create()
+  call catalyst_conduit_node_set_path_int64(exec, "catalyst/state/timestep", step)
+  call catalyst_conduit_node_set_path_float64(exec, "catalyst/state/time", time)
+  call catalyst_conduit_node_set_path_char8_str(exec, "catalyst/channels/grid/type", "mesh")
+  mesh = catalyst_conduit_node_fetch(exec, "catalyst/channels/grid/data")
+  call catalyst_conduit_node_set_path_char8_str(mesh, "coordsets/coords/type", "uniform")
+  call catalyst_conduit_node_set_path_int64(mesh, "coordsets/coords/dims/i", nx)
+  call catalyst_conduit_node_set_path_int64(mesh, "coordsets/coords/dims/j", ny)
+  call catalyst_conduit_node_set_path_char8_str(mesh, "topologies/mesh/type", "uniform")
+  call catalyst_conduit_node_set_path_char8_str(mesh, "topologies/mesh/coordset", "coords")
+  call catalyst_conduit_node_set_path_char8_str(mesh, "fields/T/association", "vertex")
+  call catalyst_conduit_node_set_path_char8_str(mesh, "fields/T/topology", "mesh")
+  call catalyst_conduit_node_set_path_external_float64_ptr(mesh, "fields/T/values", T, nx*ny)
+  ierr = c_catalyst_execute(exec)
+  call catalyst_conduit_node_destroy(exec)
+
+
+3. Python solver, no Catalyst at all
+------------------------------------
+
+  from frontier_emit import Emitter, unstructured_mesh
+  with Emitter("spool", solver="my-solver", static_mesh=True) as out:
+      for step in range(n):
+          advance()
+          out.write_step(step, t, unstructured_mesh(points, tets, "tet",
+                                                    point_fields={"p": p, "U": U}))
+
+  # Python solver that already builds the Catalyst node (conduit.Node `exec_node`):
+  from frontier_emit import Emitter, from_conduit
+  out.write_step(step, t, from_conduit(exec_node["catalyst/channels/grid/data"]))
+
+
+4. Other transports the Frontier `catalyst` connector follows
+--------------------------------------------------------------
+
+  Conduit relay files   conduit.relay.io.blueprint.save_mesh(mesh, "spool/run", "hdf5")
+                        -> spool/run.cycle_000042.root (+ domain files); set state/cycle and
+                        state/time; touch spool/frontier-stream.done at the end of the run
+  ADIOS2 BP5 / SST      one variable per Blueprint array, named by its path
+                        ("coordsets/coords/values/x", "fields/T/values", "state/time"), string
+                        leaves as attributes ("topologies/mesh/type" = "unstructured")
+  Plain VTK extractors  --mode vtk of the pipeline script, or any ParaView extractor: these
+                        are ordinary VTK files; read them with Frontier's `vtk` connector
+
+
+Reading side (while the solver runs)
+------------------------------------
+
+  python -m frontier_connectors import catalyst run/spool --out dataset \
+      --option timeout=600
+  python -m frontier_connectors import catalyst run/spool --out dataset --dry-run

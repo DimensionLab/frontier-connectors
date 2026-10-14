@@ -1,0 +1,36 @@
+[project]
+name = "frontier-connectors"
+version = "0.9.0"
+description = "DimensionLab Frontier – the connector framework: plugin manager, neutral sample model and the frontier-dataset v1.1 writer. Connectors, vendor-side exporters and importers are separate plugin distributions (frontier-connector-*, frontier-exporter-*)"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = "Apache-2.0"
+# The framework's hard dependencies are permissive only (BSD/MIT). Every reader's dependencies
+# belong to the plugin that needs them (its plugin.toml); anything
+# copyleft, proprietary or heavyweight is an optional, lazily imported package listed under
+# [[optional]] there and explained by `python -m frontier_connectors plugins doctor`.
+dependencies = [
+  "numpy>=1.26",     # BSD-3
+  "zarr>=3.0",       # MIT
+  "numcodecs>=0.15", # MIT
+]
+
+[project.optional-dependencies]
+dataset = ["frontier-data>=0.9.0,<0.10.0"]             # Apache-2.0; reference v1.1 writers and validator
+config = ["frontier>=0.9.0,<0.10.0"]                   # Apache-2.0; layered settings, credential store, policy
+test = ["pytest>=8.3", "packaging", "frontier>=0.9.0,<0.10.0", "frontier-data>=0.9.0,<0.10.0"]
+
+[project.scripts]
+frontier-connectors = "frontier_connectors.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.8.9,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+
+[tool.pytest.ini_options]
+addopts = "-q --import-mode=importlib"
+markers = [
+  "network: downloads small public sample files (runs only with FRONTIER_NETWORK_TESTS=1)",
+]

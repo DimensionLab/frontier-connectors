@@ -1,0 +1,43 @@
+name: Connector request
+description: Ask for (or propose) support for a solver or file format
+labels: [connector]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach files from a licensed solver installation or proprietary results.
+        Links to public format documentation and public sample data are what we need.
+  - type: input
+    id: tool
+    attributes:
+      label: Solver / tool and version
+    validations:
+      required: true
+  - type: input
+    id: format
+    attributes:
+      label: File format(s) and extensions
+    validations:
+      required: true
+  - type: textarea
+    id: docs
+    attributes:
+      label: Public format documentation or an open reader
+      description: Specification, vendor documentation, or an existing permissively licensed reader.
+  - type: textarea
+    id: samples
+    attributes:
+      label: Public sample data
+      description: Where can a small, redistributable sample be obtained?
+  - type: dropdown
+    id: needs_vendor
+    attributes:
+      label: Can the format be read without the vendor software?
+      options: ["Yes", "No, it needs an export step inside the tool", "Not sure"]
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I can write this connector
+        - label: I can test it against real cases

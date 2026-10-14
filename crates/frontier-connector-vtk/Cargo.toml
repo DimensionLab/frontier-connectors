@@ -1,0 +1,17 @@
+[package]
+name = "frontier-connector-vtk"
+description = "VTK (legacy .vtk and XML .vtu/.vtp/.vtm) connector for Frontier"
+version.workspace = true
+edition.workspace = true
+license = "Apache-2.0"
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+frontier-core.workspace = true
+frontier-data.workspace = true
+frontier-connectors.workspace = true
+vtkio.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

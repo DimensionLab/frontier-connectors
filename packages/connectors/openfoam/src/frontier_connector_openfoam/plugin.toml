@@ -1,0 +1,28 @@
+schema = 1
+id = "openfoam"
+kind = "connector"
+name = "OpenFOAM"
+summary = "OpenFOAM case directories"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "OpenFOAM Foundation / OpenCFD (ESI) / foam-extend (open format)"
+formats = ["openfoam"]
+maturity = "verified-public-sample"
+licence = "Apache-2.0"
+description = "Reads OpenFOAM case directories (Foundation, ESI, foam-extend): ASCII, binary and gzip, serial and decomposed, with moving meshes."
+category = "solver"
+tags = ["cfd", "open-source"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = ["vtk>=9.3", "scipy>=1.13"]
+plugins = []
+suggests = []
+
+[connectors]
+openfoam = "frontier_connector_openfoam.connector:OpenFoamConnector"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"

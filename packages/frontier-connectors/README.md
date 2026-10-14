@@ -1,0 +1,371 @@
+# frontier-connectors
+
+Reads the output of CFD and CAE tools into `frontier-dataset` v1.1: OpenFOAM, Ansys Fluent, CGNS,
+EnSight Gold, STAR-CCM+ exports, LS-DYNA, Nastran, Abaqus exports, COMSOL exports, MATLAB and
+GNU Octave, Tecplot, Exodus II, NetCDF, HDF5, Zarr, cloud solvers and more. Steady and
+transient, surface and volume.
+
+`frontier-connectors` is the framework: the neutral sample model, the dataset writer, the
+registry and the plugin manager. Every connector, every bundle of vendor-side exporter scripts
+and every importer is a plugin in its own distribution, installed, disabled and uninstalled
+independently. To add a format, publish a small Python package: see
+[Writing a connector](docs/WRITING-A-CONNECTOR.md).
+
+- **One contract.** Every connector implements `detect`, `describe` and `read`. `read` yields
+  `RawSample` objects, a numpy-only neutral form (`frontier_connectors.model`).
+- **Transients are streamed.** Readers yield one time step at a time, or hand over lazy arrays;
+  the writer appends along time, one chunk per step.
+- **No vendor licence at import time.** Proprietary formats get an exporter script that runs
+  inside the vendor tool plus a reader for what it writes. Optional readers are imported only
+  when used.
+- **A broken plugin does not break the rest.** Manifests are validated without importing plugin
+  code; a plugin that is invalid, incompatible or fails to import is reported and skipped.
+
+## Install
+
+```bash
+pip install frontier-connectors-all        # the framework and every first-party plugin
+pip install frontier-connectors            # the framework only, then pick plugins:
+python -m frontier_connectors plugins install openfoam fluent matlab
+```
+
+The framework depends on numpy, zarr and numcodecs only (BSD/MIT). Each plugin brings what its
+reader needs (h5py, scipy, vtk, meshio: BSD/MIT). Anything copyleft, proprietary or bound to a
+vendor licence is optional and imported lazily; `python -m frontier_connectors plugins doctor`
+lists every optional package, its licence, and what is missing.
+
+## Plugins
+
+```bash
+python -m frontier_connectors plugins list                 # installed plugins and their state
+python -m frontier_connectors plugins list --available     # plus first-party plugins not installed
+python -m frontier_connectors plugins search star-ccm
+python -m frontier_connectors plugins info fluent
+python -m frontier_connectors plugins install fluent       # from the index; brings exporter-fluent too
+python -m frontier_connectors plugins install fluent --find-links ./wheels --no-index   # air-gapped
+python -m frontier_connectors plugins install ./my-plugin  # third party: a path, a wheel, or git+https://...
+python -m frontier_connectors plugins disable fluent       # stays installed, leaves the registry
+python -m frontier_connectors plugins disable connector:fluent-live   # one connector of a family
+python -m frontier_connectors plugins enable fluent
+python -m frontier_connectors plugins uninstall fluent
+python -m frontier_connectors plugins doctor               # what is broken or missing, and the fix
+```
+
+| Kind | Distribution | Provides |
+|---|---|---|
+| connector | `frontier-connector-<id>` | one format family: `detect`, `describe`, `read` |
+| exporter | `frontier-exporter-<vendor>` | scripts that run inside the vendor tool |
+| importer | part of a connector plugin today | fetches from a cloud service, a live session or an in-situ stream |
+
+Each plugin ships a manifest, `plugin.toml`: id, kind, version, the dataset version it was
+written against, vendor, formats, maturity, licence, requirements and optional packages. It is
+validated when the registry loads. A plugin written against another major version of the
+dataset format, or a newer minor one, is listed as `incompatible` and not loaded.
+
+Enable and disable switches live in `~/.frontier/plugins.toml` (`FRONTIER_HOME` moves it);
+they need neither network nor write access to the Python environment.
+
+Installing goes through `pip`, or through `uv pip` when the environment has no pip. A
+directory of wheels works as a source and as an air-gapped bundle (`--find-links <dir>
+--no-index`).
+
+The import path `frontier_connectors.connectors.<module>` still works, with a
+`DeprecationWarning`; use `frontier_connector_<plugin>.connector`. Looking a connector up by id
+needs no change.
+
+## Command line
+
+```bash
+python -m frontier_connectors list                    # loaded connectors with maturity
+python -m frontier_connectors detect   case/          # which connectors recognise a path
+python -m frontier_connectors describe case/          # zones, fields, time steps, solver metadata
+python -m frontier_connectors convert  case/ --out datasets/case \
+    --zones "internalMesh,patch/wall*" --fields U,p --times 0:200:10
+python -m frontier_connectors plugins install-exporter starccm --to .   # vendor-side scripts
+python -m frontier_connectors importers               # cloud, live-session and in-situ importers
+python -m frontier_connectors import flow360 <case-id> --dry-run        # print the calls, contact nothing
+python -m frontier_connectors import flow360 <case-id> --out datasets/wing
+```
+
+Every command takes `--json` and then prints one JSON document; errors come as
+`{"error", "message", "hint"}` with exit code 2. Useful `convert` flags:
+
+| Flag | Meaning |
+|---|---|
+| `--connector <id>` | skip auto-detection (generic containers such as `hdf5` or `tabular`) |
+| `--zones a,b*,!c` | zone names or globs, `!` excludes; default is each connector's default zones |
+| `--fields U,p` | field names or globs |
+| `--times` | `all`, `first`, `last`, `<index>`, `start:stop:step`, `i,j,k`, `t=0.1,0.2` (nearest stored time) |
+| `--mapping file.json` | mapping config for `matlab`, `hdf5`, `netcdf`, `zarr`, `tabular` |
+| `--option key=value` | connector option, repeatable (values are parsed as JSON when possible) |
+| `--time-as-samples` | store each step as its own sample, for meshes that change topology in time |
+| `--length-unit m --source-length mm` | rescale coordinates; field values are never rescaled |
+| `--backend auto\|frontier_data\|zarr` | which writer to use, see below |
+
+## Python
+
+```python
+import frontier_connectors as fc
+
+fc.detect("case/")  # [Detection(connector_id="openfoam", confidence=1.0, ...)]
+desc = fc.describe("case/")  # SourceDescription: zones, fields, time, physics, BCs
+samples = fc.read("case/", zones=["internalMesh"], fields=["U", "p"], times="last")
+fc.to_frontier_dataset(samples, "datasets/case", description=desc)
+
+fc.convert("run.cas.h5", "datasets/run", times=slice(0, None, 5))  # all of the above in one call
+```
+
+## How a conversion works
+
+`read` yields `RawSample` objects in one of two forms.
+
+- *Step form*: one sample per zone and time step (`time`, `time_index`), sharing an `id`. The
+  first step carries the geometry; later steps carry fields, and new points only when the mesh
+  moves (stored as `points_t`).
+- *Block form*: `times` plus fields with a leading `time` axis whose data is a lazy array
+  (h5py, zarr, memmap). Used by the array stores and MATLAB v7.3.
+
+`to_frontier_dataset` writes `manifest.json`, `samples/<id>/meta.json` and one zarr v3 store
+per sample (`surface.zarr`, `mesh.zarr`, `grid.zarr` or `points.zarr`) with `times`, `dims`
+attributes on every array and `static/` for time-independent inputs. Two writers produce the
+same layout:
+
+- `frontier_data` (the reference writers, extra `dataset`) receives samples that are complete
+  in memory: steady ones and in-memory time blocks.
+- A built-in streaming zarr writer handles step-form transients and lazy blocks. It appends
+  along time and is also the fallback when `frontier_data` is not installed.
+
+`ConvertResult.backends` records which writer wrote each sample. A failed conversion removes
+its output directory. If a later step has a different point count or connectivity, the writer
+stops and asks for `--time-as-samples`.
+
+## Support matrix
+
+Maturity:
+
+- `verified-public-sample`: validated on files written by the tool itself.
+- `verified-synthetic`: validated on generated files only.
+- `exporter+reader`: an exporter script for the vendor tool plus a reader for its output. The
+  exporter is not validated against a licensed installation.
+- `implemented-unverified-live`: a cloud or live-session path. Not validated against the live
+  service or a licensed installation.
+- `planned`: not implemented; fails with a message that says what to do instead.
+
+The table is the output of `python -m frontier_connectors list --markdown`.
+
+<!-- matrix:start -->
+| Connector | Format / tool | Vendor | Files | Time | Kinds | Maturity | Reader and licence | Getting the data out |
+|---|---|---|---|---|---|---|---|---|
+| `abaqus` | Abaqus (.fil results, odb export, .inp decks) and CalculiX (.frd results) | Dassault Systemes SIMULIA (Abaqus); CalculiX is open source | `.odb`, `.inp`, `.frd`, `.fil` | steady + transient | surface, mesh | verified-public-sample | Apache-2.0 (reader and exporter script); .odb needs an Abaqus licence to export | Results: add *FILE FORMAT, ASCII with *NODE FILE / *EL FILE to the deck and convert the .fil results file; Abaqus is not needed to read it. Existing .odb: get the script with `python -m frontier_connectors exporters abaqus`, run `abaqus python odb_export.py job.odb --out job_frontier` and convert the job_frontier directory. Input decks (.inp) are read directly as mesh-only samples. *Reads Abaqus .fil results (ASCII and binary; Abaqus 6.19 and 6.23), .inp decks (mesh, sets, instances, includes) and CalculiX .frd results (ASCII and binary). .fil integration point values are averaged per element; section points, values at element nodes and contact / energy records are not read. Not read: .dat, .rpt, .sim, substructures, assembly-level sets that mix instances. The .odb route (odb_export.py) is not validated against a licensed Abaqus installation. .fil eigenmodes and continued SDV records are validated on generated files only.* |
+| `acusolve` | Altair AcuSolve (acuTrans EnSight export + input deck and run log) | Altair | `.Log`, `.echo`, `.inp`, `frontier_export.json` | steady + transient | surface, mesh | exporter+reader | Apache-2.0 (no vendor code; acuTrans runs in the user's licensed AcuSolve) | In the problem directory run `acuTrans -pb <problem> -to ensight -ensopt gold -mesh -out -extout -ts A`, or the wrapper script from `python -m frontier_connectors exporters acusolve`, then point the connector at the problem directory. Fields come from the EnSight export, physics and boundary conditions from <problem>.inp, convergence from <problem>.<run>.Log. *Experimental. Reads the acuTrans EnSight export through the `ensight` connector, physics and boundary conditions from the input deck and convergence from the run log. ACUSIM.DIR and H3D are not read. Not validated on a complete AcuSolve export; the export script is not validated against a licensed AcuSolve installation.* |
+| `ansys-rst` | Ansys Mechanical / MAPDL result file (.rst, .rth) | Ansys | `.rst`, `.rth`, `.rmg` | steady + transient | mesh, surface | verified-public-sample | Apache-2.0 (reader: ansys-mapdl-reader, MIT, optional) | Point at the file.rst / file.rth that Mechanical or MAPDL writes into the solver files directory (pip install 'frontier-connector-ansys[rst]'). For results the open reader cannot expand (cyclic symmetry, distributed files) use the DPF script: `python -m frontier_connectors exporters ansys_mechanical`. *Reads the mesh, the nodal DOF solution (displacement, rotation, temperature, ...) and nodal stress and elastic, plastic and thermal strain of every result set. Modal results use the mode number as axis, with the frequencies in the metadata; options={'deformed': true} adds the displacement to the points. Element-centred results and cyclic-symmetry expansion are not read. .rmg is not validated.* |
+| `cfx` | Ansys CFX (cfx5export / CFD-Post export: CGNS, EnSight or CSV + JSON sidecar) | Ansys | `.res`, `.def`, `.trn`, `.cfx`, `.bak`, `frontier_export.json`, `.csv` | steady + transient | surface, mesh, point_cloud | exporter+reader | Apache-2.0 (exporter scripts run next to the user's licensed CFX) | Run `sh export_for_frontier.sh -o export_dir run_001.res` (script: `python -m frontier_connectors exporters cfx`; it wraps cfx5export -cgns and writes frontier_export.json), or play export_for_frontier.cse in CFD-Post, then point the connector at the export directory. A single CSV exported from CFD-Post is read directly. *Experimental. Reads CFD-Post generic CSV exports (point clouds, [Faces] surfaces, [Lines] polylines, null values) and CFX profile data ([Spatial Fields], [Parameters]) as single files, and cfx5export CGNS / EnSight directories with the frontier_export.json sidecar. The cfx5export route and the exporter scripts are not validated against a licensed CFX installation; the sidecar (version, domains, boundary types, fluid, turbulence model) is validated on generated files only. .res, .def, .trn, .bak and .cfx are proprietary and not read.* |
+| `hdf5` | Generic HDF5 (dimension scales, PDEBench / The Well / mesh layouts, mapping config) | The HDF Group (open format) | `.h5`, `.hdf5`, `.hdf`, `.he5` | steady + transient | grid, mesh, surface, point_cloud | verified-public-sample | Apache-2.0 (reader: h5py, BSD-3) | Write the arrays with h5py / HDF5 from any solver or script, then describe the layout with a mapping config (--mapping file.json) unless it is one of the auto-detected layouts (dimension scales, PDEBench, The Well, points+cells+fields). *Detects datasets with dimension scales, The Well, PDEBench / FNO-style grids and points + cells mesh layouts. Any other layout needs a mapping config: the error prints the dataset tree and a mapping skeleton. The Well, dimension-scale and mesh layouts are validated on generated files only. Fluent CFF, CGNS, MATLAB v7.3, VTKHDF, Exodus, XDMF heavy data, MED and PyFR files belong to their own connectors.* |
+| `netcdf` | NetCDF 3/4 (CF conventions, UGRID 2-D), optional xarray engine | Unidata (open format) | `.nc`, `.nc4`, `.nc3`, `.netcdf`, `.cdf`, `.cdf5` | steady + transient | grid, mesh, surface, point_cloud | verified-public-sample | Apache-2.0 (readers: h5py BSD-3, scipy BSD-3; optional xarray Apache-2.0); optional: xarray | Most climate/ocean/weather models and many CFD codes write NetCDF directly; from Python use xarray.Dataset.to_netcdf, from ParaView/VisIt use the NetCDF writer. OPeNDAP URLs, GRIB and multi-file datasets go through options={'engine': 'xarray'}. *NetCDF-4 is read with h5py, NetCDF-3 classic and 64-bit-offset with scipy (memory-mapped). CF grids with 1-D coordinates and UGRID 2-D face meshes are detected automatically. Curvilinear grids, CDF-5, UGRID 1-D / 3-D-layered and DSG feature types need a mapping or options={'engine': 'xarray'}.* |
+| `zarr` | Zarr v2/v3 (xarray-style stores, mapping config, frontier-dataset round trip) | Zarr community (open format) | `.zarr` | steady + transient | grid, mesh, surface, point_cloud | verified-synthetic | Apache-2.0 (reader: zarr-python, MIT) | xarray: Dataset.to_zarr(path). Any zarr group written by a solver or script can be described with a mapping config. A frontier-dataset directory (or one of its sample stores) is read back as-is. *Reads directory and .zip stores in Zarr v2 and v3. Dimension names come from _ARRAY_DIMENSIONS (v2) or dimension_names (v3); CF attributes are honoured as for NetCDF. Remote stores (s3://, gs://) are not opened. Validated on generated files only.* |
+| `catalyst` | ParaView Catalyst 2 / in-situ streams (Conduit Blueprint spool, relay, ADIOS2) | Kitware / LLNL / ORNL (open source) | `.root`, `.bp`, `.sst` | steady + transient | grid, mesh, surface, point_cloud | verified-synthetic | Apache-2.0; optional: adios2, h5py | Get the solver-side scripts with `python -m frontier_connectors plugins install exporter-catalyst`, then use one of: (1) copy frontier_emit.py (numpy only) next to the solver and call Emitter.write_step(step, time, blueprint_mesh) at each output step; (2) run the Catalyst 2 pipeline frontier_catalyst_pipeline.py (CATALYST_IMPLEMENTATION_NAME=paraview), which writes the same spool; (3) write Conduit relay Blueprint files (relay.io.blueprint.save_mesh, Ascent) or ADIOS2 BP5 / SST with Blueprint paths as variable names. Follow the run with `python -m frontier_connectors import catalyst <spool\|stream> --out ds`. Files a Catalyst pipeline writes with plain VTK extractors (.vtpd / .vtm series, VTKHDF) are read by the `vtk` connector. *Reads frontier-spool directories, Conduit relay Blueprint files (hdf5, json, yaml, conduit_*) and ADIOS2 BP4 / BP5 files and BP5 / SST streams, during or after the run. Validated with Conduit 0.9.5 and ADIOS2 2.12.1. Not validated against ParaView Catalyst (the pipeline script), Fides or MPI-parallel writers.* |
+| `cgns` | CGNS (HDF5 natively with h5py; ADF through VTK) | CGNS Steering Committee (open standard) | `.cgns` | steady + transient | surface, mesh, point_cloud | verified-public-sample | Apache-2.0 (reader: h5py, BSD-3; ADF fallback: VTK, BSD-3) | Export CGNS from the solver or post-processor (Ansys CFX: cfx5export -cgns; Fluent: File > Export > CGNS; STAR-CCM+: File > Export > CGNS; Fidelity/FINE, SU2, elsA, Pointwise write it natively) and point at the .cgns file or a directory holding a numbered series. *Reads CGNS/HDF5 with h5py: structured and unstructured zones, linear and quadratic elements, MIXED, NGON_n / NFACE_n, boundary patches as surface zones, vertex and cell-centred solutions, rind, links, FlowSolutionPointers, file-per-step series, units, reference state and flow equations. Cubic and higher elements, face-centred solutions and non-Cartesian coordinates are not supported. ADF files and options={'engine': 'vtk'} go through VTK's vtkCGNSReader, without the CGNS metadata.* |
+| `code-saturne` | code_saturne (EnSight Gold / MED in RESU/<run>/postprocessing) | EDF (open source, GPL solver; open output formats) | - | steady + transient | surface, mesh | verified-public-sample | Apache-2.0 (no vendor code; delegates to open-format readers) | No export step: code_saturne writes EnSight Gold by default into RESU/<run>/postprocessing/ (RESULTS_FLUID_DOMAIN.case; MED or CGNS when selected in the writer settings). Point at the case directory, the run directory or the .case; setup.xml and run_solver.log next to postprocessing/ supply the physics. *Reads RESU/<run>/postprocessing output (code_saturne 9.1, FVM 0.3): mesh including polyhedra, cell fields, solver version, turbulence model, fluid properties, notebook variables and boundary natures. Transient EnSight output and the MED and CGNS writers are validated on generated files only.* |
+| `comsol` | COMSOL Multiphysics (Data export: sectionwise / spreadsheet / grid text, VTU; .mph) | COMSOL AB | `.txt`, `.csv`, `.dat`, `.vtu`, `.mph` | steady + transient | mesh, surface, point_cloud, grid | verified-public-sample | Apache-2.0 (own reader; optional 'mph' client is MIT and needs a COMSOL licence) | Results > Export > Data: Data format 'Sectionwise', 'Full precision', 'Include header', all times (or File type VTU); or run the shipped exporter (python -m frontier_connectors exporters comsol: Java method, LiveLink for MATLAB script, Python 'mph' script), which also writes frontier_export.json with physics, parameters and selections. *Reads COMSOL 5.2 to 6.4 data exports: sectionwise (triangles, tetrahedra, lines, several expressions, appended exports), spreadsheet (@ t= columns, complex values), grid, and VTU with one array per time. Not validated on real files: sectionwise files with several time steps or with quads, hexahedra, prisms or pyramids, and grid exports with time. The exporter scripts, their sidecar and the mph engine are not validated against a licensed COMSOL installation. .mph is not read.* |
+| `converge` | CONVERGE CFD (HDF5 post files; post_convert exports) | Convergent Science | `.h5` | steady + transient | mesh, surface, point_cloud | verified-public-sample | Apache-2.0 (reader: VTK vtkCONVERGECFDReader, BSD-3) | CONVERGE 3.x: set the post file format to HDF5 (post*.h5) and point at one file or the output directory. Legacy binary post*.out files: convert with CONVERGE's `post_convert` to EnSight and point at the .case file. *Reads CONVERGE 3.x post*.h5 with VTK: one volume mesh per stream (polyhedral cut cells), boundary surfaces and spray parcels as opt-in zones, time series from the numbered files. Each step has its own mesh (AMR), so every time step becomes its own sample unless option static_mesh=true. Legacy post*.out is proprietary and not read. post_convert EnSight exports go through the `ensight` connector and are not validated on a real post_convert export.* |
+| `ensight` | EnSight Gold / EnSight 6 case | Ansys/CEI (openly documented format) | `.case`, `.encas` | steady + transient | surface, mesh, grid, point_cloud | verified-public-sample | Apache-2.0 (reader: VTK, BSD-3) | Export 'EnSight Gold' from the solver (STAR-CCM+: File > Export or the shipped macro; Fluent: File > Export > EnSight Case Gold; CONVERGE: post_convert; OpenFOAM: foamToEnsight) and point at the .case file. *Reads ASCII, C binary and Fortran binary files: unstructured and structured parts, several time sets, moving geometry. Parts of the highest dimension are read by default, boundary parts with zones=[...]. Server-of-servers (.sos) files are not read.* |
+| `fidelity` | Cadence Fidelity / NUMECA FINE (project layout + CGNS solution) | Cadence (NUMECA) | `.iec`, `.cfv`, `.run` | steady + transient | surface, mesh | verified-synthetic | Apache-2.0 (no vendor code; delegates to open-format readers) | FINE/Turbo, FINE/Open, FINE/Marine and Fidelity write the solution as <project>_<computation>.cgns next to the .run file: point at the .run file, the computation directory, the .iec file or the project directory. Select the 3-D output quantities you need in the Outputs page before running (they go to the CGNS file together with the mesh). *Reads mesh and fields from the solver's CGNS file through the `cgns` connector, steady or as a <name>_t<i>.cgns series; zones without a mesh (the restart base) are skipped. Metadata comes from the .iec project file, the .res residual history and the .xmf global results. .run keywords are undocumented: kept raw, with name-based hints only. Validated on generated files only, not on a real FINE or Fidelity project.* |
+| `flow360` | Flexcompute Flow360 (cloud CFD) | Flexcompute | `.flow360.json`, `.flow360.toml` | steady + transient | surface, mesh | implemented-unverified-live | Apache-2.0 (own code; optional SDK 'flow360' is LGPL-2.1); optional: flow360 | Run `python -m frontier_connectors import flow360 <case id> --out ds` with FLOW360_APIKEY set and `pip install flow360` for the result files (--dry-run prints the calls). Or pass a <name>.flow360.json reference file. Or download the results in the web UI or with case.results.download(surface=True, volume=True, destination=...) and point the connector at that directory. *Experimental. Not validated against the live Flow360 service. Lists projects, cases, meshes and files and reads case metadata and simulation.json through the web API; result files need the `flow360` client (LGPL-2.1). A downloaded results directory (surfaces.tar.gz / volumes.tar.gz and simulation.json) is read offline through the format connectors; validated on generated files only.* |
+| `fluent-cff` | Ansys Fluent CFF (.cas.h5 / .dat.h5 / .msh.h5) | Ansys | `.cas.h5`, `.dat.h5`, `.msh.h5` | steady + transient | mesh, surface | verified-public-sample | Apache-2.0 (reader: h5py, BSD-3; no Ansys software needed) | Fluent 2020R1+: File > Write > Case & Data writes .cas.h5/.dat.h5 (CFF is the default; TUI: /file/cff-files? yes, /file/write-case-data name). For transients set File > Write > Autosave so that one .dat.h5 per saved time step is written. *Reads Fluent 19.4 to 24.1 CFF files with h5py. Cell zones are read by default; boundary zones with options={'boundaries': True} or zones=[...].* |
+| `fluent-legacy` | Ansys Fluent legacy (.cas / .dat / .msh, ASCII or binary, optionally .gz) | Ansys | `.cas`, `.dat`, `.msh`, `.cas.gz`, `.dat.gz`, `.msh.gz` | steady + transient | mesh | verified-public-sample | Apache-2.0 (reader: VTK vtkFLUENTReader, BSD-3) | Fluent: /file/cff-files? no then File > Write > Case & Data writes legacy .cas/.dat; prefer the CFF default (.cas.h5/.dat.h5), which carries real boundary surfaces. *Read through VTK's vtkFLUENTReader: cell zones are volume meshes. For a face zone VTK returns the adjacent cells carrying the face values, not the faces, so boundary zones are off by default. Polyhedral cases are not supported.* |
+| `fluent-live` | Ansys Fluent live session (PyFluent) / batch journal | Ansys | `.fluent.json` | steady + transient | mesh, surface | implemented-unverified-live | Apache-2.0 (drives ansys-fluent-core, MIT; needs a licensed Ansys Fluent); optional: ansys-fluent-core | Write a session spec run.fluent.json (case, data files, export format cff \| ensight \| cgns, zones, quantities). With PyFluent and a licensed Fluent: `python -m frontier_connectors import fluent-live run.fluent.json --out dataset` (--dry-run lists every call). Without PyFluent: `python -m frontier_connector_fluent journal run.fluent.json --out export_dir` writes export.jou and launch scripts for `fluent 3ddp -g -t<N> -i export.jou`; run it, then convert export_dir. Ready-made scripts: `python -m frontier_connectors exporters fluent`. *Experimental. Not validated against a licensed Fluent installation. Written for the PyFluent 0.42.2 API (Fluent 2025 R1 and 2026 R1). Journal path: the answer order of export/ensight-gold and export/cgns is undocumented and marked unverified in the generated journal.* |
+| `geometry` | Geometry only (STL, OBJ, PLY, OFF; STEP / IGES / BREP via optional tessellator) | open formats | `.stl`, `.obj`, `.ply`, `.off`, `.step`, `.stp`, `.iges`, `.igs`, `.brep`, `.brp` | steady | surface, point_cloud | verified-public-sample | Apache-2.0 (optional CAD tessellators: cadquery-ocp Apache-2.0 on OpenCascade LGPL-2.1-with-exception; gmsh GPL-2.0-or-later, opt-in only); optional: cadquery-ocp | Any CAD or meshing tool exports STL / OBJ / PLY. For STEP / IGES / BREP install cadquery-ocp (pip install cadquery-ocp) and tune options tessellation={'linear_deflection': ..., 'angular_deflection': ...}. Put a design sweep in one directory to convert it as one dataset. *STL, OBJ, PLY and OFF are read with built-in parsers. STEP, IGES and BREP need cadquery-ocp, or gmsh on request. OBJ materials and textures, PLY tristrips and binary STL colour attributes are ignored.* |
+| `lsdyna` | LS-DYNA (d3plot results, keyword decks) | Ansys LST (LS-DYNA) | `.d3plot`, `.k`, `.key`, `.dyn`, `.kw`, `.k.gz`, `.key.gz` | steady + transient | surface, mesh, point_cloud | verified-public-sample | Apache-2.0 (own reader; optional engines: VTK BSD-3, lasso-python BSD-3); optional: lasso-python | Point at the 'd3plot' root file of the run (keep d3plot01, d3plot02, ... next to it); request results with *DATABASE_BINARY_D3PLOT and *DATABASE_EXTENT_BINARY. Keyword decks (.k/.key) are read as mesh-only samples. *Reads d3plot with a built-in reader: solids, shells, thick shells, beams, SPH, element deletion. Keyword decks (*NODE, *ELEMENT_*, *PART) are read as mesh only. Not read: 10-node and higher-order solids, airbag particles, rigid road and rigid-body data, femzip-compressed files, binout, d3thdt, d3eigv.* |
+| `luminary` | Luminary Cloud (cloud CFD) | Luminary Cloud | `.luminary.json`, `.luminary.toml` | steady + transient | surface, mesh | implemented-unverified-live | Apache-2.0 (own code; optional SDK 'luminarycloud' is proprietary); optional: luminarycloud | Run `python -m frontier_connectors import luminary <simulation id> --out ds` with LC_API_KEY set and `pip install luminarycloud` (--dry-run prints the SDK calls; --option solution=all for a transient surface series). Or pass a <name>.luminary.json reference file. Or extract solution.download_volume_data() / download_surface_data() yourself and point the connector at that directory. *Experimental. Not validated against the live Luminary Cloud service. Every call goes through the proprietary `luminarycloud` SDK (written for SDK 0.27.1): projects, simulations, solutions, simulation parameters (time, viscous and turbulence model, boundary conditions), mesh metadata, surface and volume data, global residuals. A transient surface series becomes one .pvd time series; volume data exists only for completed steady simulations. An extracted .vtm / .vtu / .vtp directory is read offline through the `vtk` connector; validated on generated files only.* |
+| `matlab` | MATLAB / GNU Octave MAT-files (PDE Toolbox, grids, snapshots, ODE/Simulink signals) | MathWorks | `.mat`, `.slx`, `.mdl` | steady + transient | mesh, surface, grid, point_cloud | verified-public-sample | Apache-2.0 (readers: scipy BSD-3, h5py BSD-3; no MathWorks code) | Save plain arrays or structs with save(file, '-v7.3') in MATLAB or save('-v7', file) in GNU Octave. Tables, timetables, Simulink outputs and PDE result objects need the +frontier package: add the folder printed by `python -m frontier_connectors exporters matlab` to the path and call frontier.export(file, 'Name', value, ...), frontier.exportPDEResults or frontier.exportSimulink (MATLAB R2019b+ and GNU Octave 7+; Name=value syntax needs MATLAB R2021a+). The package writes '-v7.3' in MATLAB and '-v7' in Octave; above 2 GB per array in Octave use '-hdf5' and the octave connector. *Reads MAT-files level 4, 5, 6, 7 and v7.3 written by MATLAB (4.2c to 7.4, R2013 to R2025) and by GNU Octave 11.3.0. A sparse logical written by Octave is skipped with a warning. PDE Toolbox result structs and curvilinear grids are validated on generated files only. The +frontier export package is validated under GNU Octave 11.3.0 and not validated under MATLAB: Name=value call syntax, '-v7.3' writing, tables and timetables, string arrays, triangulation objects, PDE Toolbox result and model objects, and Simulink and Simscape objects. The matlab.engine live path is not validated.* |
+| `octave` | GNU Octave save files (text, binary, HDF5; same layouts as matlab) | GNU Octave | `.mat`, `.txt`, `.dat`, `.bin`, `.h5`, `.hdf5`, `.gz` | steady + transient | mesh, surface, grid, point_cloud | verified-public-sample | Apache-2.0 (independent readers written from the format description; no GPL code) | Nothing to install in Octave. Use save('-hdf5', file, ...) (any size, read lazily), save('-binary', file, ...) or save('-text', file, ...), also with -z, for plain arrays and structs in the same layouts as the matlab connector. save('-v7', file, ...) writes a MAT-file, read by the matlab connector. For explicit geometry, time and units use the +frontier package (`python -m frontier_connectors exporters matlab`): frontier.export(file, 'Nodes', p, 'Elements', t, 'Fields', struct('u', u), 'Version', '-hdf5'). *Reads GNU Octave's text, binary and HDF5 save formats, also gzip-compressed (-z); HDF5 arrays are read one time step at a time. Function handles and old-style @class objects are opaque. Not read: binary files from before Octave 2.1 and the pre-2004 HDF5 layout. Struct member order is lost in Octave's HDF5 files (sorted by name). Validated with files written by GNU Octave 11.3.0 only; big-endian binary files, narrowed storage codes of older binary files, text files without the 'Created by Octave' line and CRLF line ends are validated on generated files only.* |
+| `exodus` | Exodus II (Sandia SEACAS, MOOSE, libMesh, Cubit, Sierra) | Sandia National Laboratories (open format) | `.e`, `.exo`, `.ex2`, `.exii`, `.g`, `.gen` | steady + transient | mesh, surface, point_cloud | verified-public-sample | Apache-2.0 (reader: VTK vtkExodusIIReader, BSD-3) | MOOSE: [Outputs] exodus = true. Sierra/SEACAS/Cubit/libMesh write .e/.exo/.g directly; join parallel pieces (file.e.N.i) with SEACAS epu first. *Element blocks are the default zones; side sets and node sets are extra zones. Reads nodal, element and global variables at all time steps. One piece of a parallel decomposition is read as it is, without merging.* |
+| `gmsh` | Gmsh MSH (2.2 / 4.1, ASCII and binary) | Gmsh (C. Geuzaine, J.-F. Remacle; open format) | `.msh` | steady + transient | mesh, surface, point_cloud | verified-public-sample | Apache-2.0 (reader: meshio, MIT) | Gmsh: File > Export > .msh (version 4.1 or 2.2; tick 'Save all elements' only if you have no physical groups). Post-processing views: Save 'Mesh-based' views into the .msh; parsed-view .pos files must be re-saved that way. *Physical groups become zones. $NodeData and $ElementData views are read, including several time steps of one view; element views assume the consecutive element tags Gmsh writes. $ElementNodeData and .pos parsed views are not read. MSH 4 files need every saved entity in a physical group. Views and binary files are validated on generated files only.* |
+| `med` | MED (Salome, Code_Aster, Code_Saturne) | EDF / CEA (open format, Salome platform) | `.med`, `.rmed`, `.mmed` | steady + transient | mesh, surface, point_cloud | verified-public-sample | Apache-2.0 (reader: own, on h5py BSD-3) | Code_Aster: IMPR_RESU(FORMAT='MED', RESU=_F(RESULTAT=...)); Salome: File > Export > MED; Code_Saturne: writer format 'MED'. MED 2.1 files need Salome's medimport. *Groups (families) become zones; node groups are point-cloud zones. Reads fields on nodes and cells for every stored time step. Gauss-point (ELGA) and element-node (ELNO) fields are averaged per cell; their storage order for more than one cell is not validated on a real file. Fields on a profile are NaN outside it. Structured MED meshes and polyhedra are not read. Several time steps are validated on generated files only.* |
+| `meshio` | Other meshio formats (Medit, Netgen, TetGen, UGRID, MOAB, FLAC3D, PERMAS, ...) | various open formats (via meshio) | `.mesh`, `.meshb`, `.vol`, `.vol.gz`, `.node`, `.ele`, `.ugrid`, `.h5m`, `.f3grid`, `.post`, `.post.gz`, `.dato`, `.dato.gz`, `.xml`, `.avs`, `.mdpa`, `.hmf` | steady | mesh, surface, point_cloud | verified-public-sample | Apache-2.0 (reader: meshio, MIT) | These are mesh formats: results usually live elsewhere (FUN3D: Tecplot/VTK, NGSolve: VTK, FEniCS: XDMF/PVD). Any other meshio format can be converted with `meshio convert in.xxx out.vtu` and read by the vtk connector. *Reads Medit .mesh / .meshb, Netgen .vol, TetGen .node / .ele, UGRID and FLAC3D .f3grid. Region and material ids become zones. MOAB .h5m, DOLFIN XML, AVS-UCD, PERMAS, Kratos .mdpa and HMF are validated on meshio-written files only.* |
+| `su2` | SU2 native mesh (.su2) with its .cfg | SU2 Foundation (open source) | `.su2` | steady | mesh, surface | verified-public-sample | Apache-2.0 (reader: own) | The .su2 file is the mesh only. SU2 results are written as VTU/PVD (OUTPUT_FILES= PARAVIEW), Tecplot, CSV (surface_flow.csv, restart_flow.csv) or CGNS: read those with the vtk, tecplot, tabular or cgns connectors. *Reads the mesh, markers as boundary zones and multi-zone meshes; solver, turbulence model, free-stream parameters and the boundary condition of each marker come from a .cfg next to the mesh. No solution fields.* |
+| `xdmf` | XDMF (FEniCS/dolfinx, Firedrake, PETSc, MOOSE, ParaView) | open format (Kitware / ARL) | `.xdmf`, `.xmf` | steady + transient | mesh, surface, grid, point_cloud | verified-public-sample | Apache-2.0 (readers: meshio MIT, VTK BSD-3) | dolfinx: XDMFFile.write_mesh / write_function(u, t); legacy FEniCS: XDMFFile.write; ParaView: Save Data as Xdmf. Keep the .h5 heavy-data file next to the .xdmf. *Unstructured grids and meshio time series are read through meshio; structured topologies (CoRect, Rect, SMesh), spatial collections and dolfinx / ParaView temporal collections through VTK's Xdmf2 reader. FiniteElementFunction (dolfinx checkpoint) attributes are not evaluated: only the mesh of such files is read. Cell-centred data of regular grids is averaged to the grid nodes.* |
+| `nastran` | Nastran (MSC / NX / Simcenter, OptiStruct): BDF decks, OP2 and HDF5 results | Hexagon (MSC Nastran), Siemens (Simcenter Nastran), Altair (OptiStruct) | `.bdf`, `.nas`, `.dat`, `.fem`, `.blk`, `.inc`, `.op2`, `.h5`, `.hdf5` | steady + transient | surface, mesh | verified-public-sample | Apache-2.0 (own BDF / HDF5 readers; OP2 through pyNastran, BSD-3, optional); optional: pyNastran | Results: add PARAM,POST,-1 (OP2 with geometry) or MDLPRM,HDF5,1 (MSC HDF5) and request DISPLACEMENT(PLOT)=ALL, STRESS(PLOT)=ALL; keep the .bdf next to the .op2. OptiStruct: .fem decks are Nastran-dialect bulk data and OUTPUT,OP2 writes an .op2 (.h3d is proprietary and not read). *BDF decks are read as mesh only. MSC HDF5 (MSC Nastran 2020): nodal and centroidal solid and plate results. OP2 needs pyNastran (BSD-3, optional): static, modal, buckling and transient subcases. Not converted: complex (frequency response) results, composite ply and bar / beam stresses, CORD1x systems, superelements, .f06 text results. Punch results (.pch) and OptiStruct .out / .h3d belong to the `optistruct` connector.* |
+| `nek5000` | Nek5000 / NekRS field files (.f%05d, .nek5000) | Argonne National Laboratory (open source) | `.nek5000`, `.f00001` | steady + transient | mesh | verified-public-sample | Apache-2.0 (own reader; Nek5000 itself is BSD-3) | Nek5000 and NekRS write case0.f00001, case0.f00002, ... directly (plus case.nek5000 from the visnek script); point the connector at any of them or at the .nek5000 file. *Reads binary #std files: 2-D and 3-D, single and double precision, both byte orders, split dumps (nfiles > 1); geometry is reused when later dumps omit X. Legacy .fld files and pressure on the PN-2 mesh are not read. Spectral elements are exported as linear GLL sub-cells.* |
+| `openfoam` | OpenFOAM case (Foundation, ESI, foam-extend) | OpenFOAM Foundation / OpenCFD (ESI) / foam-extend (open format) | `.foam`, `.OpenFOAM` | steady + transient | mesh, surface | verified-public-sample | Apache-2.0 (own FoamFile parser; mesh assembly by VTK, BSD-3) | Point at the case directory (system/, constant/polyMesh, time directories), a .foam stub inside it or system/controlDict. Decomposed cases (processor*/) are read directly; run reconstructPar first for the collated format (processors<N>/). *Reads ASCII, binary and gzip cases, serial and decomposed (uncollated), with moving points; multi-region with options={'region': ...}. Zones: internalMesh (default) and patch/<name> (opt-in). Steady-solver cases read the last iteration unless options={'iterations': 'all'}. Not read: surface (flux) fields, lagrangian clouds, cell and face zones, collated decomposition.* |
+| `optistruct` | Altair OptiStruct: .fem decks, OP2 and punch results, HyperView export of .h3d | Altair | `.fem`, `.op2`, `.pch`, `.pun`, `.punch`, `.h3d` | steady + transient | surface, mesh | verified-public-sample | Apache-2.0 (own punch / deck readers; OP2 through pyNastran, BSD-3, optional); optional: pyNastran | Add `OUTPUT,PUNCH` (text <job>.pch, read natively) or `OUTPUT,OP2` / `PARAM,POST,-1` (<job>.op2, needs pyNastran) plus `DISPLACEMENT = ALL`, `STRESS = ALL` to the .fem deck and keep the deck next to the result file. .h3d is proprietary: rerun with one of the above, or export it from HyperView with frontier_hv_export.tcl (plugin exporter-optistruct) and read the export directory. Radioss: connector `radioss`. *Reads .fem decks (mesh, control section, names), OP2 results through pyNastran (optional) and punch results with a built-in reader. PLY, STACK, DTPL and other OptiStruct-only cards are counted, not converted; complex, bar / beam and composite punch tables are skipped. .h3d is not read; the HyperView export route is not validated against a licensed HyperView installation. The punch reader is not validated on OptiStruct-written files (validated on MSC Nastran punch files and generated files). .out, .hist and .desvar metadata is validated on generated files only.* |
+| `radioss` | Altair Radioss / OpenRadioss: animation files (A001...) and starter decks | Altair (Radioss), OpenRadioss community | `.rad` | steady + transient | mesh, point_cloud | verified-public-sample | Apache-2.0 (own readers written from the public layout; no solver code) | Animation files: request them in the engine deck (/ANIM/DT plus /ANIM/VECT/VEL, /ANIM/ELEM/EPSP, /ANIM/TENS/STRESS/..., optionally /ANIM/GZIP) and point the connector at <run>A001; keep <run>_0000.rad next to it for units. Time history <run>T01: convert with the open th_to_csv tool and read the CSV with `tabular`. Radioss .h3d output is proprietary: write A-files instead (they are the default; drop /H3D/... only). *Reads animation files (magic 0x542c, plain or gzip) and starter decks (block format, 10-character fields): mesh, units, parts, materials. Quadratic solids are reduced to corner nodes; //SUBMODEL offsets and the 4x fixed format are not handled. Time history (T01) is not read: convert it with th_to_csv and read the CSV with `tabular`. Older animation versions and adaptive-mesh runs (changing topology) are rejected. Tensors, SPH and mass / numbering flags are validated on generated files only.* |
+| `palabos` | Palabos (writes VTK .vti/.vtk directly) | University of Geneva / FlowKit (open source, AGPL solver; open output format) | - | steady + transient | grid | verified-public-sample | Apache-2.0 (no vendor code; delegates to open-format readers) | No export step: Palabos writes VTK image data (VtkImageOutput2D/3D -> tmp/vtk*.vti, VtkStructuredImageOutput -> .vts). Point at the output directory (the one holding plbLog.dat) or at a single .vti file. *Reads Palabos output directories (.vti series and .vts states) with Re, resolution, relaxation frequency, dx and dt from plbLog.dat. An output directory is recognised by plbLog.dat next to its VTK files; file numbers are iterations, converted to time with the log's dt, and values are in the units the application wrote. The XML parameter file is not read. 3-D volume series with a log, parallel .pvti and sparse multi-block output are not validated.* |
+| `powerflow` | SIMULIA PowerFLOW (.snc surface measurements, pf2ens / PowerVIZ exports) | Dassault Systemes SIMULIA (Exa) | `.snc`, `.fnc`, `.cdi`, `.ckpt`, `frontier_export.json` | steady + transient | surface, mesh | verified-synthetic | Apache-2.0 (no vendor code; exports are made by the user's licensed PowerFLOW) | Surface measurement files (.snc) are read directly. For fluid files (.fnc), and for static pressure in physical units, run `export_for_frontier.sh <file> <out_dir>` (script: `python -m frontier_connectors exporters powerflow`; it calls `pf2ens` per frame and `exaritool nc-stats.ri`) and point at the directory. Or export EnSight Gold from PowerVIZ and point at the .case file. *Experimental. Dassault Systemes publishes no .snc specification; the reader is validated on generated files only. Geometry is in metres and force-per-area, velocity and density variables in SI; static pressure and other unit classes stay in lattice units, and frame times in lattice time steps unless nc-stats output is supplied. .fnc, .cdi and .ckpt are not read. The pf2ens export script is not validated against a licensed PowerFLOW installation.* |
+| `pyfr` | PyFR native mesh and solution (.pyfrm, .pyfrs) | PyFR (open source, Imperial College London / Texas A&M) | `.pyfrs`, `.pyfrm` | steady + transient | point_cloud, mesh | verified-synthetic | Apache-2.0 (own reader; PyFR itself is BSD-3) | PyFR writes soln-<t>.pyfrs next to the .pyfrm mesh; read them directly as a cloud of solution points, or run `pyfr export mesh.pyfrm soln.pyfrs out.vtu` and read the VTU with the vtk connector when cell connectivity is needed. *Reads PyFR <= 2.1 files (spt_* / soln_* datasets) and PyFR 3.x files (eles / nodes, <prefix>/p<order>-<etype> with 'pts'). A solution becomes a point cloud of solution points (quad, hex, tri, tet, pri; legacy files only quad and hex with Gauss-Legendre or Lobatto points; no pyramids, no region subsets); a mesh alone becomes a linear corner mesh. Validated on generated files and on PyFR 3.1 and 2.1 output.* |
+| `rescale` | Rescale (cloud HPC job outputs) | Rescale | `.rescale.json`, `.rescale.toml` | steady + transient | surface, mesh | implemented-unverified-live | Apache-2.0 (own REST client, standard library only) | Run `python -m frontier_connectors import rescale <job id> --out ds` with RESCALE_API_KEY set (RESCALE_API_URL or api_url= for eu.rescale.com / platform.rescale.jp; --dry-run prints the calls). Or pass a <name>.rescale.json reference file. Or download the job files in the web UI and convert that directory: each file goes to the matching connector. *Experimental. Not validated against the live Rescale service. REST v2: jobs, job status, runs with their design variables, paged run output files with include / exclude filters, file download. Mesh and boundary conditions come from the result files, which are read by the format connectors. Files above 5 GB are refused (the Files API limit). A downloaded job directory is read offline; validated on generated files only.* |
+| `simscale` | SimScale (cloud CAE) | SimScale | `.simscale.json`, `.simscale.toml` | steady + transient | surface, mesh | implemented-unverified-live | Apache-2.0 (own REST client, standard library only) | Run `python -m frontier_connectors import simscale <project>/<simulation>/<run> --out ds` with SIMSCALE_API_KEY set (--dry-run prints the calls). Or pass a <name>.simscale.json reference file. Or download the solution fields in the Workbench and point the connector at the unzipped directory. *Experimental. Not validated against the live SimScale service. REST v0: projects, simulations, runs, run spec (analysis type, turbulence model, boundary conditions), mesh cell and node counts, SOLUTION_FIELD and TABLE result downloads. Solution archives are read by the format connectors; which formats SimScale writes per analysis type is not validated. An unzipped download is read offline; validated on generated files only.* |
+| `simulink` | Simulink / Simscape logs, FMU results (CSV, Dymola / OpenModelica MAT), FMU catalogue | MathWorks / FMI standard (Modelica Association) | `.mat`, `.csv`, `.fmu`, `.slx`, `.mdl` | steady + transient | point_cloud | verified-public-sample | Apache-2.0 (readers: numpy, scipy BSD-3, h5py BSD-3; no MathWorks or FMI code) | Simulink: add the folder printed by `python -m frontier_connectors exporters matlab` to the MATLAB path, then frontier.exportSimulink(sim(model), 'run.mat') (logsout, yout, xout, To Workspace, Simscape simlog), frontier.exportSimulinkRuns(parsim(in), 'runs') for several runs, frontier.exportSDI('all', 'sdi.mat') for Simulation Data Inspector runs. Logs saved as 'Structure with time' / 'Array' are read directly. FMUs: simulate with an FMI tool and keep the result next to the FMU (FMPy: `fmpy simulate m.fmu --output-file m_out.csv`; Dymola / OpenModelica: the *_res.mat result file). *Reads FMI CSV results with units from the FMU's modelDescription.xml (FMI 1.0, 2.0 and 3.0), Dymola 7.4 / 2012 and OpenModelica 1.8 result files (trajectory 1.1 binTrans and binNormal, 1.0 'save plotted') including alias signs and parameters, and SLX package metadata. Validated on generated files only: Simulink 'Structure with time', 'Structure' and 'Array' logs, To File arrays, .mdl files, and detection of Simulink, timeseries and Simscape objects. frontier.exportSimulink, exportSDI and exportSimulinkRuns are not validated under MATLAB. MATLAB objects (SimulationOutput, Dataset, timeseries, simlog) are not decoded: read raises NeedsExportError with the exporter call. FMUs are never executed.* |
+| `starccm` | Siemens STAR-CCM+ (EnSight Gold / CGNS export, optional JSON sidecar; XYZ tables) | Siemens Digital Industries Software | `.sim`, `.sim~`, `.ccm`, `.ccmg`, `.ccmp`, `.ccmt`, `frontier_export.json` | steady + transient | surface, mesh, point_cloud | verified-public-sample | Apache-2.0 (macro runs inside the user's licensed STAR-CCM+) | Run `starccm+ -batch ExportForFrontier.java case.sim` (macro: `python -m frontier_connectors exporters starccm`); it writes EnSight Gold or CGNS plus frontier_export.json. Point the connector at that export directory. A plain File > Export > EnSight Gold case and an XYZ table CSV are read too, without the physics. *Reads EnSight Gold written by File > Export of STAR-CCM+ 14.06, 18.02 and 19.02 (version, title, parts, node fields, polygons) and XYZ table CSV exports. The macro ExportForFrontier.java and its sidecar (physics models, boundary types, units) are not validated against a licensed STAR-CCM+ installation. CGNS exports and transient exports are not validated. .sim and CCMIO (.ccm*) files are proprietary and not read: export them first.* |
+| `tabular` | Tabular point data (CSV / TSV / text, Parquet, OpenFOAM probes and force coeffs) | open formats | `.csv`, `.tsv`, `.txt`, `.dat`, `.out`, `.xy`, `.prn`, `.parquet`, `.pq` | steady + transient | point_cloud | verified-public-sample | Apache-2.0 (optional: pyarrow, Apache-2.0); optional: pyarrow | ParaView: File > Save Data > CSV (point data). Fluent: File > Export > ASCII, or report-file monitors (.out). CFX / COMSOL / STAR-CCM+: export monitor or probe tables as CSV/text. OpenFOAM: the probes and forceCoeffs function objects write postProcessing/<name>/<time>/ files that are read directly. *Layouts: point snapshot, long (time, probe) tables, time + signal columns. Global signals are stored on one point at the origin. Parquet needs pyarrow. ParaView, Fluent, CFX and COMSOL style tables and Parquet are validated on generated files only. Tecplot ASCII and COMSOL '% Model:' files belong to their own connectors. Date-string time columns and ragged probe series (without per_probe) are not supported.* |
+| `tecplot` | Tecplot (ASCII .dat/.tec, binary .plt) | Tecplot, Inc. (documented formats) | `.dat`, `.tec`, `.tp`, `.plt`, `.szplt` | steady + transient | mesh, surface, grid, point_cloud | verified-public-sample | Apache-2.0 (readers: own; .szplt needs Tecplot 360 + pytecplot); optional: pytecplot | Tecplot 360: File > Write Data File... (ASCII .dat or binary .plt, not SZL). Most CFD codes write these directly (Fluent/CFX export, SU2 OUTPUT_FILES= TECPLOT_ASCII, FUN3D, CFL3D, OVERFLOW, STAR-CCM+ export). *Reads ASCII files (ordered, FE, polygonal and polyhedral zones, solution times) and binary .plt versions #!TDV102, #!TDV107 and #!TDV112. Not validated on real files: the binary versions in between, and cell-centred ordered data, polyhedral zones and text / geometry records in binary files. .szplt (SZL) needs options={"engine": "pytecplot"} and a licensed Tecplot 360; that path is not validated.* |
+| `vtk` | VTK (XML, legacy, VTKHDF, PVD/series time series) | Kitware (open format) | `.vtu`, `.vtp`, `.vts`, `.vtr`, `.vti`, `.vtm`, `.vtmb`, `.vtpc`, `.vtpd`, `.vthb`, `.pvtu`, `.pvtp`, `.pvts`, `.pvtr`, `.pvti`, `.pvd`, `.series`, `.vtk`, `.vtkhdf` | steady + transient | surface, mesh, grid, point_cloud | verified-public-sample | Apache-2.0 (reader: VTK, BSD-3) | ParaView: File > Save Data (.vtu/.vtm, or .pvd with 'Write time series'). OpenFOAM: foamToVTK. SU2/Palabos/Flow360/Luminary/SimScale write VTU directly. |
+<!-- matrix:end -->
+
+## Limits of validation
+
+- The exporter scripts for STAR-CCM+, CFX, Abaqus `.odb`, COMSOL, Fluent, HyperView, AcuSolve
+  and PowerFLOW are not validated against a licensed installation of the vendor tool.
+- The four cloud importers and the live Fluent session are not validated against the live
+  service or a licensed installation.
+- PowerFLOW `.snc` and Fidelity / FINE project files are validated on generated files only.
+- The ParaView Catalyst pipeline script is not validated against ParaView. The spool, Conduit
+  and ADIOS2 paths are validated with Conduit 0.9.5 and ADIOS2 2.12.1.
+- The `+frontier` MATLAB package is validated under GNU Octave 11.3.0, not under MATLAB.
+  Tables, timetables, `-v7.3` writing, PDE Toolbox and Simulink objects need MATLAB.
+
+Per-connector limits are in the last column of the support matrix.
+
+## Vendor-side exporters
+
+Each bundle is an exporter plugin (`frontier-exporter-<vendor>`).
+`python -m frontier_connectors plugins exporters` lists the installed ones;
+`plugins install-exporter <vendor> --to <dir>` copies one to `<dir>/<vendor>/` with a version
+stamp (`.frontier-exporter.json`: plugin version and a hash per file), and
+`plugins uninstall-exporter <vendor>` removes exactly those files, keeping any you edited.
+`plugins doctor` reports copies that are older than the installed plugin.
+
+| Tool | Vendor key | Scripts | Writes | Read by |
+|---|---|---|---|---|
+| STAR-CCM+ | `starccm` | `ExportForFrontier.java` (`starccm+ -batch ExportForFrontier.java case.sim`) | EnSight Gold or CGNS per state, `frontier_export.json` with physics continua, boundaries, units | `starccm` |
+| Abaqus | `abaqus` | `odb_export.py` (`abaqus python odb_export.py job.odb --out job_frontier`) | `meta.json`, `mesh_*.npz`, one `frame_*.npz` per frame | `abaqus` |
+| COMSOL | `comsol` | `ExportForFrontier.java`, `export_for_frontier.m` (LiveLink), `export_for_frontier.py` (`mph`), or Results > Export > Data (Sectionwise) | sectionwise text or VTU, `frontier_export.json` | `comsol` |
+| Fluent | `fluent` | `export_for_frontier.py` (PyFluent) and `export_for_frontier.jou` (`fluent 3ddp -g -i export_for_frontier.jou`, no Python needed) | `.cas.h5`/`.dat.h5`, EnSight Gold or CGNS, `frontier_export.json` | `fluent-live`, `fluent-cff`, `ensight`, `cgns` |
+| CFX | `cfx` | `export_for_frontier.sh` (`cfx5export`), `export_for_frontier.cse` (CFD-Post) | CGNS or EnSight, `frontier_export.json` | `cfx` |
+| Ansys Mechanical | `ansys-mechanical` | `export_for_frontier.py` (DPF) | alternative to reading `.rst` directly | `ansys-rst` |
+| MATLAB / GNU Octave | `matlab` | `+frontier/export.m`, `exportPDEResults.m`, `exportSimulink.m`, `exportSimulinkRuns.m`, `exportSimulinkSignals.m`, `exportSDI.m`, `write.m`, `sample.m` | canonical MAT layout (`-v7.3` on MATLAB, `-v7` on Octave) | `matlab`, `octave`, `simulink` |
+| HyperView / HyperMesh | `optistruct` | `frontier_hv_export.tcl`, `frontier_hm_export_deck.tcl`, `radioss_convert.sh` | CSV result tables + sidecar from `.h3d`; solver deck | `optistruct`, `radioss` |
+| AcuSolve | `acusolve` | `export_for_frontier.sh` / `.bat` (wraps `acuTrans`) | EnSight Gold, `frontier_export.json` | `acusolve` |
+| PowerFLOW | `powerflow` | `export_for_frontier.sh` (wraps `pf2ens`) | EnSight Gold, `frontier_export.json` | `powerflow` |
+| ParaView Catalyst / any solver | `catalyst` | `frontier_emit.py` (numpy only, copy into the solver), `frontier_catalyst_pipeline.py`, `adaptor_example.txt` | a spool directory of Blueprint steps, followed live | `catalyst` |
+
+## Importers
+
+An importer fetches data that is not a local file yet and leaves a directory that connectors
+read. `--dry-run` prints every call it would make and needs neither credentials nor the
+vendor SDK.
+
+| Importer | Source | Credentials (environment) | Needs |
+|---|---|---|---|
+| `flow360` | case id, reference file, `list:projects` / `list:cases` | `FLOW360_APIKEY` | `flow360` client (LGPL-2.1) for result files |
+| `luminary` | simulation id, reference file, `list:...` | `LC_API_KEY` | `luminarycloud` SDK (proprietary terms) |
+| `simscale` | project / simulation / run ids, reference file, `list:...` | `SIMSCALE_API_KEY`, `SIMSCALE_API_URL` | nothing (REST, standard library) |
+| `rescale` | job id, reference file, `list:jobs` | `RESCALE_API_KEY` | nothing (REST, standard library) |
+| `fluent-live` | a `run.fluent.json` session spec | none | `ansys-fluent-core` and a licensed Fluent, or the generated journal |
+| `catalyst` | a spool directory or an ADIOS2 stream of a running solver | none | `adios2` for BP / SST streams |
+
+```bash
+python -m frontier_connectors importers
+python -m frontier_connectors import rescale list:jobs --dry-run
+python -m frontier_connectors import catalyst run/spool --out datasets/run --option follow=true
+```
+
+All except `catalyst` are `implemented-unverified-live`: not validated against the live service
+or a licensed installation.
+
+## MATLAB and GNU Octave
+
+`.mat` level 4, 5, 7 (scipy) and v7.3 (h5py, lazy per time step). Layouts recognised without
+configuration: the canonical layout of the `+frontier` package, PDE Toolbox (`Mesh.Nodes`,
+`Mesh.Elements`, `NodalSolution`, `SolutionTimes`) and classic `[p,e,t]`, node and
+connectivity arrays of a user's own FEM or FVM code, `meshgrid`/`ndgrid` arrays and axis
+vectors, struct or cell arrays of snapshots, struct arrays of runs, `ode45` solutions and
+time-plus-signals workspaces. `describe` reports which layout matched
+(`metadata["layout"]`) and the mapping it inferred (`metadata["mapping"]`), ready to copy and
+edit.
+
+MATLAB objects (`table`, `timetable`, `string`, `Simulink.SimulationOutput`, PDE result
+objects) are opaque inside a MAT-file. The reader says so and names the exporter function:
+
+```matlab
+addpath exporters/matlab
+frontier.export("wake.mat", Nodes=xy, Elements=tri, Time=t, Fields=struct("velocity", U, "pressure", p));
+frontier.exportPDEResults(results, "heat.mat");          % PDE Toolbox result objects
+frontier.exportSimulink(out, "sim.mat");                 % logsout, yout, Simscape simlog
+```
+
+A mapping handles anything else. Array axes are matched by size; an ambiguous fit is an error
+that lists the candidates.
+
+```json
+{"kind": "mesh",
+ "points": "model.xyz", "cells": {"var": "model.tet", "cell_type": "tetra", "index_base": 1},
+ "time": "t",
+ "fields": {"velocity": {"vars": ["u", "v", "w"], "location": "point", "units": "m/s"},
+            "p": {"var": "P", "units": "Pa"}},
+ "parameters": {"Re": "params.Re"}, "domain": "cfd", "solver": "in-house FVM"}
+```
+
+The live path through `matlab.engine` (`options={"engine": true}`) is not validated.
+
+### GNU Octave
+
+The `+frontier` package runs under GNU Octave (validated with 11.3.0) as well as MATLAB. Use the
+classic `'Name', value` argument pairs there; `Name=value` is MATLAB R2021a+ syntax. Octave
+cannot write `-v7.3`, so the package saves `-v7` under Octave (a 2 GB per-variable limit) and
+`-v7.3` under MATLAB. Not available under Octave: tables, timetables, string arrays, PDE
+Toolbox and Simulink objects.
+
+Octave's own save formats are read by the `octave` connector, with the same layout detection
+and mapping as `matlab`: `save -text` (the default), `save -binary`, `save -hdf5`, and their
+gzip variants (`-z`). `-v4`, `-v6` and `-v7` files written by Octave go through `matlab`.
+
+## Array stores and tables with a mapping
+
+`netcdf`, `hdf5` and `zarr` share one mapping schema. CF NetCDF, stores with dimension scales, xarray-style
+Zarr, The Well, PDEBench-style files and `points` + `cells` mesh layouts need no mapping. For
+anything else the error prints the dataset tree and a mapping skeleton to paste:
+
+```json
+{"kind": "grid", "time": "/t", "coords": {"x": "/grid/x", "y": "/grid/y"},
+ "fields": {"velocity": {"paths": ["/u", "/v"], "dims": ["batch", "time", "y", "x"]},
+            "p": {"path": "/p", "dims": ["batch", "time", "y", "x"], "units": "Pa"}},
+ "samples": {"axis": "batch"}, "parameters": {"Re": "@Re"}, "domain": "cfd"}
+```
+
+`dims` names every on-disk axis in on-disk order; the reader transposes lazily to
+`([time,] x, y[, z], component)`.
+
+`tabular` reads CSV, TSV, whitespace text and Parquet: point snapshots, long
+`(time, probe)` tables, time-plus-signal monitors, and OpenFOAM `postProcessing` output.
+Vectors are grouped by suffix (`U:0 U:1 U:2`, `U_x U_y U_z`) and units come from headers such
+as `p [Pa]`. Signals without coordinates are attached to one point at the origin, with a
+warning, because the dataset format has no store for global signals.
+
+## Optional packages and licences
+
+Never installed by default and imported only when used. `plugins doctor` shows which are
+present. Flagged entries are copyleft, proprietary, or need a vendor licence to run.
+
+| Package | Licence | Plugin | Used for | Flag |
+|---|---|---|---|---|
+| `frontier-data` | Apache-2.0 | framework | reference writers and validator | extra `dataset` |
+| `ansys-mapdl-reader` | MIT | `ansys` | `.rst`, `.rth` | extra `rst`; no Ansys licence needed |
+| `xarray` | Apache-2.0 | `arrays` | opt-in NetCDF engine | extra `xarray` |
+| `pyarrow` | Apache-2.0 | `tabular` | Parquet | extra `parquet` |
+| `adios2` | Apache-2.0 | `catalyst` | BP4 / BP5 files, BP5 / SST streams | extra `adios2` |
+| `pyNastran` | BSD-3-Clause | `nastran`, `optistruct` | OP2 results | pins numpy below 2: use a separate environment |
+| `lasso-python` | BSD-3-Clause | `lsdyna` | alternative d3plot engine | |
+| `conduit` (LLNL) | BSD-3-Clause | `catalyst` | pass `conduit.Node` objects directly | not on PyPI (the PyPI project of that name is unrelated) |
+| `cadquery-ocp` | Apache-2.0 | `geometry` | STEP, IGES, BREP tessellation | wraps OpenCascade, **LGPL-2.1 with exception** |
+| `gmsh` | **GPL-2.0-or-later** | `geometry` | CAD tessellation, only with `tessellator="gmsh"` | never imported by default |
+| `flow360` | **LGPL-2.1** | `flow360` | Flow360 result files | needs a Flexcompute account |
+| `luminarycloud` | **proprietary SDK terms** | `luminary` | every Luminary call | needs an account |
+| `mph` | MIT | `comsol` | export through COMSOL | needs a licensed COMSOL |
+| `ansys-fluent-core`, `ansys-dpf-core` | MIT | `fluent`, `ansys` | live session, DPF script | need licensed Ansys products |
+| `pytecplot` | MIT | `tecplot` | `.szplt` conversion | needs a licensed Tecplot 360 |
+| `matlabengine` | **proprietary (MathWorks)** | `matlab` | live MATLAB path | needs MATLAB |
+
+Format knowledge taken from copyleft sources, with independently written readers and no code
+copied: GNU Octave's save formats (GPL-3.0 source) and the Radioss animation layout
+(OpenRadioss, AGPL-3.0 source).
+
+## Rust
+
+The `frontier-connectors` crate detects every format in the table from magic bytes,
+extensions and directory layout without starting Python (`formats::detect`), and delegates
+`describe` and `convert` to this package through `python -m frontier_connectors ... --json`
+(`PythonBridge`). Its `plugins` module exposes the plugin list, the enable and disable
+switches, install, uninstall and the doctor report through the same bridge. Set
+`FRONTIER_CONNECTORS_CMD` to choose the interpreter and `FRONTIER_CONNECTORS_DESCRIBE=native`
+to never start Python.

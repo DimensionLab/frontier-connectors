@@ -1,0 +1,31 @@
+schema = 1
+id = "exporter-catalyst"
+kind = "exporter"
+name = "ParaView Catalyst 2 / in-situ emitter"
+summary = "Solver-side emitter and Catalyst 2 pipeline script for in-situ streaming"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "Kitware (open source)"
+formats = []
+maturity = "exporter+reader"
+licence = "Apache-2.0"
+description = "A numpy-only step emitter, a ParaView Catalyst 2 pipeline script and adaptor notes that run next to the solver and write what the catalyst connector reads. The pipeline script is not validated against ParaView."
+category = "exporter"
+tags = ["exporter", "catalyst"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = []
+plugins = []
+suggests = []
+
+[exporter]
+vendor = "catalyst"
+tool = "ParaView Catalyst 2 (or any solver that can call Python)"
+files = "files"
+usage = "copy frontier_emit.py next to the solver, or pass frontier_catalyst_pipeline.py as catalyst/scripts/<name>/filename"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"

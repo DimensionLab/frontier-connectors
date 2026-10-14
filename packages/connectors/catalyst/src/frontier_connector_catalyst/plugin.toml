@@ -1,0 +1,62 @@
+schema = 1
+id = "catalyst"
+kind = "connector"
+name = "ParaView Catalyst 2 / in-situ streams"
+summary = "In-situ streams: Conduit Blueprint spool, relay files, ADIOS2"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "Kitware / LLNL / ORNL (open source)"
+formats = ["frontier-spool", "conduit-blueprint", "conduit-relay", "adios2-bp", "adios2-sst"]
+maturity = "verified-synthetic"
+licence = "Apache-2.0"
+description = "Reads Conduit Mesh Blueprint steps from a spool directory, Conduit relay files or ADIOS2 (BP5 / SST), during or after the run. Not validated against ParaView Catalyst."
+category = "importer"
+tags = ["in-situ", "streaming", "paraview"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = []
+plugins = []
+suggests = ["exporter-catalyst"]
+
+[[optional]]
+package = "adios2"
+module = "adios2"
+licence = "Apache-2.0"
+purpose = "read ADIOS2 BP4/BP5 files and follow BP5/SST streams"
+extra = "adios2"
+requirement = "adios2>=2.10"
+
+[[optional]]
+package = "h5py"
+module = "h5py"
+licence = "BSD-3-Clause"
+purpose = "read Conduit relay Blueprint files written with the hdf5 protocol"
+extra = "hdf5"
+requirement = "h5py>=3.10"
+
+[[optional]]
+package = "pyyaml"
+module = "yaml"
+licence = "MIT"
+purpose = "read Conduit relay Blueprint files written with the yaml protocol"
+extra = "yaml"
+requirement = "pyyaml>=6"
+
+[[optional]]
+package = "conduit"
+module = "conduit"
+licence = "BSD-3-Clause"
+purpose = "pass conduit.Node objects to the Blueprint bridge directly"
+flag = "LLNL Conduit is not on PyPI (the PyPI project named conduit is unrelated): build it from https://github.com/LLNL/conduit or use Spack"
+
+[connectors]
+catalyst = "frontier_connector_catalyst.connector:CatalystConnector"
+
+[importers]
+catalyst = "frontier_connector_catalyst.importer:CatalystImporter"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"

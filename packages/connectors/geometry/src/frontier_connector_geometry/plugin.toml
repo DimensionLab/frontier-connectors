@@ -1,0 +1,42 @@
+schema = 1
+id = "geometry"
+kind = "connector"
+name = "Geometry"
+summary = "STL, OBJ, PLY, OFF surfaces; STEP, IGES, BREP"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "open formats"
+formats = ["stl", "obj", "ply", "off", "step", "iges", "brep"]
+maturity = "verified-public-sample"
+licence = "Apache-2.0"
+description = "Reads STL, OBJ, PLY and OFF surfaces. STEP, IGES and BREP need an optional tessellator (cadquery-ocp, or gmsh)."
+category = "file-format"
+tags = ["cad", "geometry", "mesh"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = []
+plugins = []
+suggests = []
+
+[[optional]]
+package = "cadquery-ocp"
+licence = "Apache-2.0"
+purpose = "tessellate STEP / IGES / BREP"
+module = "OCP"
+flag = "wraps OpenCascade (LGPL-2.1 with exception)"
+
+[[optional]]
+package = "gmsh"
+licence = "GPL-2.0-or-later"
+purpose = "tessellate CAD with gmsh (only with tessellator='gmsh')"
+module = "gmsh"
+flag = "GPL: never imported unless requested"
+
+[connectors]
+geometry = "frontier_connector_geometry.connector:GeometryConnector"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"

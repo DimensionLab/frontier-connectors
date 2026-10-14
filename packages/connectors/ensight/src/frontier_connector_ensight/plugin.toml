@@ -1,0 +1,28 @@
+schema = 1
+id = "ensight"
+kind = "connector"
+name = "EnSight Gold"
+summary = "EnSight Gold and EnSight 6 case files"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "Ansys/CEI (openly documented format)"
+formats = ["ensight-gold", "ensight6"]
+maturity = "verified-public-sample"
+licence = "Apache-2.0"
+description = "Reads EnSight Gold and EnSight 6 case files, steady and transient, ASCII and binary."
+category = "file-format"
+tags = ["cfd", "post-processing"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = ["vtk>=9.3"]
+plugins = []
+suggests = []
+
+[connectors]
+ensight = "frontier_connector_ensight.connector:EnSightConnector"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"

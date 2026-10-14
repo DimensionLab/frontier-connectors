@@ -1,0 +1,28 @@
+schema = 1
+id = "pyfr"
+kind = "connector"
+name = "PyFR"
+summary = "PyFR mesh and solution files"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "PyFR (open source, Imperial College London / Texas A&M)"
+formats = ["pyfr-v3", "pyfr-legacy"]
+maturity = "verified-synthetic"
+licence = "Apache-2.0"
+description = "Reads PyFR native mesh (.pyfrm) and solution (.pyfrs) files, PyFR <= 2.1 and 3.x. Validated on generated files and on PyFR 3.1 and 2.1 output."
+category = "solver"
+tags = ["cfd", "high-order", "open-source"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = ["h5py>=3.10"]
+plugins = []
+suggests = []
+
+[connectors]
+pyfr = "frontier_connector_pyfr.connector:PyfrConnector"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"

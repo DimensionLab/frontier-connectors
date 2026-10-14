@@ -1,0 +1,28 @@
+schema = 1
+id = "code-saturne"
+kind = "connector"
+name = "code_saturne"
+summary = "code_saturne postprocessing output"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "EDF (open source, GPL solver; open output formats)"
+formats = ["code-saturne-resu", "ensight-gold", "med"]
+maturity = "verified-public-sample"
+licence = "Apache-2.0"
+description = "Reads code_saturne RESU/<run>/postprocessing output (EnSight Gold, MED or CGNS) with the physics from setup.xml and run_solver.log."
+category = "solver"
+tags = ["cfd", "open-source"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = []
+plugins = ["ensight", "meshio", "cgns"]
+suggests = []
+
+[connectors]
+code-saturne = "frontier_connector_code_saturne.connector:CodeSaturneConnector"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"

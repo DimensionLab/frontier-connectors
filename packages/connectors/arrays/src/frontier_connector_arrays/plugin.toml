@@ -1,0 +1,38 @@
+schema = 1
+id = "arrays"
+kind = "connector"
+name = "Array stores (NetCDF, HDF5, Zarr)"
+summary = "NetCDF 3/4, generic HDF5 and Zarr v2/v3"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "Unidata (open format)"
+formats = ["netcdf4", "netcdf3", "cf", "ugrid", "hdf5", "zarr", "zarr-v2", "zarr-v3", "frontier-dataset"]
+maturity = "verified-public-sample"
+licence = "Apache-2.0"
+description = "Reads NetCDF 3/4, generic HDF5 and Zarr v2/v3. Common layouts are detected automatically; any other layout takes a mapping config."
+category = "file-format"
+tags = ["arrays", "hdf5", "netcdf", "zarr"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = ["h5py>=3.10", "scipy>=1.13", "zarr>=3.0"]
+plugins = []
+suggests = []
+
+[[optional]]
+package = "xarray"
+licence = "Apache-2.0"
+purpose = "open GRIB, OPeNDAP and multi-file datasets (engine=xarray)"
+module = "xarray"
+extra = "xarray"
+requirement = "xarray>=2024.1"
+
+[connectors]
+netcdf = "frontier_connector_arrays.connector:NetcdfConnector"
+hdf5 = "frontier_connector_arrays.connector:Hdf5Connector"
+zarr = "frontier_connector_arrays.connector:ZarrConnector"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"

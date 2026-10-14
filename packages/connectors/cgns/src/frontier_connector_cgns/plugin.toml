@@ -1,0 +1,28 @@
+schema = 1
+id = "cgns"
+kind = "connector"
+name = "CGNS"
+summary = "CGNS files (HDF5 and ADF)"
+version = "0.9.0"
+data_model_version = "1.1"
+vendor = "CGNS Steering Committee (open standard)"
+formats = ["cgns-hdf5", "cgns-adf"]
+maturity = "verified-public-sample"
+licence = "Apache-2.0"
+description = "Reads CGNS/HDF5 with h5py and ADF files through VTK."
+category = "file-format"
+tags = ["cfd", "mesh", "open-standard"]
+homepage = "https://dimensionlab.org"
+readme = "README.md"
+requires = ["h5py>=3.10", "vtk>=9.3"]
+plugins = ["ensight"]
+suggests = []
+
+[connectors]
+cgns = "frontier_connector_cgns.connector:CgnsConnector"
+
+[author]
+name = "DimensionLab"
+company = "DimensionLab s.r.o."
+email = "hello@dimensionlab.org"
+url = "https://dimensionlab.org"
