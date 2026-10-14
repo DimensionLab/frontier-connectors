@@ -8,6 +8,7 @@ to :mod:`importlib.metadata`.
 
 from __future__ import annotations
 
+import importlib
 import json
 import shutil
 import subprocess
@@ -347,13 +348,13 @@ def test_enable_disable_plugin_and_single_connector(site: Path) -> None:
 def test_unknown_connector_hint_names_the_plugin_to_install(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # pretend nothing is installed: the catalog still knows who provides 'fluent-cff'
+    # The offline catalog can name a provider even when no plugin is installed.
     monkeypatch.setattr(discovery, "discover", lambda state=None: [])
     registry.reload()
     with pytest.raises(fc.UnsupportedSourceError) as e:
-        registry.get("fluent-cff")
-    assert "plugins install fluent" in (e.value.hint or "")
-    assert discovery.missing_hint("exporter", "ansys_mechanical") is not None
+        registry.get("openfoam")
+    assert "plugins install openfoam" in (e.value.hint or "")
+    assert discovery.missing_hint("exporter", "catalyst") is not None
     assert discovery.missing_hint("connector", "definitely-not-a-format") is None
 
 
@@ -361,11 +362,10 @@ def test_legacy_import_paths_still_resolve() -> None:
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         from frontier_connector_vtk.connector import VtkConnector
-        from frontier_connectors.connectors.vtk import VtkConnector as Legacy  # type: ignore[import-not-found]
+        legacy = importlib.import_module("frontier_connectors.connectors.vtk").VtkConnector
+        vendors = importlib.import_module("frontier_connectors.connectors.vendors")
 
-        from frontier_connectors.connectors import vendors  # type: ignore[attr-defined]
-
-        assert Legacy is VtkConnector
+        assert legacy is VtkConnector
         assert vendors.PalabosConnector.id == "palabos"
     assert any(issubclass(w.category, DeprecationWarning) for w in caught)
     with pytest.raises(ModuleNotFoundError):
@@ -528,7 +528,7 @@ def test_search_and_install_command_from_a_wheel_directory(
     if shutil.which("uv") is None:
         pytest.skip("uv is not on PATH")
     result = installer.install(
-        ["toyfmt", "fluent"], find_links=[str(wheels)], no_index=True, dry_run=True
+        ["toyfmt", "catalyst"], find_links=[str(wheels)], no_index=True, dry_run=True
     )
     cmd = result["command"]
     assert cmd[1:3] == ["pip", "install"] and cmd[3:5] == ["--python", sys.executable]
@@ -536,11 +536,11 @@ def test_search_and_install_command_from_a_wheel_directory(
     # ids become distribution names; a connector plugin pulls in its suggested exporter plugin
     assert cmd[-3:] == [
         "acme-frontier-toy",
-        "frontier-connector-fluent",
-        "frontier-exporter-fluent",
+        "frontier-connector-catalyst",
+        "frontier-exporter-catalyst",
     ]
-    slim = installer.install(["fluent"], with_suggested=False, dry_run=True)
-    assert slim["command"][-1] == "frontier-connector-fluent"
+    slim = installer.install(["catalyst"], with_suggested=False, dry_run=True)
+    assert slim["command"][-1] == "frontier-connector-catalyst"
     # paths and VCS URLs are passed through untouched
     url = "git+https://example.invalid/acme/frontier-toy.git@v1"
     assert installer.install([url], dry_run=True)["command"][-1] == url
@@ -549,10 +549,10 @@ def test_search_and_install_command_from_a_wheel_directory(
     )
     assert local["command"][-1].endswith("acme_frontier_toy-1.2.3-py3-none-any.whl")
 
-    un = installer.uninstall(["fluent"], dry_run=True)
+    un = installer.uninstall(["catalyst"], dry_run=True)
     assert (
         un["command"][1:3] == ["pip", "uninstall"]
-        and un["command"][-1] == "frontier-connector-fluent"
+        and un["command"][-1] == "frontier-connector-catalyst"
     )
     with pytest.raises(ConnectorError, match="refusing to uninstall the framework"):
         installer.uninstall(["frontier-connectors"], dry_run=True)
