@@ -40,6 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: astral-sh/setup-uv@v6
+      - run: python tools/bootstrap.py --skip-python
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check licenses sources

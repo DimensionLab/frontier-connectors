@@ -36,9 +36,13 @@ frontier-connectors = { workspace = true }
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+src = ["packages/*/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "W"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["frontier", "frontier_agent", "frontier_connectors", "frontier_data", "frontier_deploy", "frontier_eval", "frontier_examples", "frontier_explain", "frontier_hub", "frontier_physicsnemo", "frontier_planner", "frontier_prep", "frontier_train"]
 
 [tool.pytest.ini_options]
 testpaths = ["packages/connectors/arrays/", "packages/connectors/catalyst/", "packages/connectors/cgns/", "packages/connectors/code-saturne/", "packages/connectors/ensight/", "packages/connectors/exporter-catalyst/", "packages/connectors/geometry/", "packages/connectors/meshio/", "packages/connectors/nek5000/", "packages/connectors/openfoam/", "packages/connectors/oss/", "packages/connectors/palabos/", "packages/connectors/pyfr/", "packages/connectors/tabular/", "packages/connectors/vtk/", "packages/frontier-connectors/"]

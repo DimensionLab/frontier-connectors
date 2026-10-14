@@ -673,7 +673,14 @@ fn real_bridge() -> Option<PythonBridge> {
     let root = python::workspace_root(Path::new(env!("CARGO_MANIFEST_DIR")))?;
     let bridge = PythonBridge::new(
         "uv",
-        ["run", "--frozen", "--no-sync", "python", "-m", "frontier_connectors"],
+        [
+            "run",
+            "--frozen",
+            "--no-sync",
+            "python",
+            "-m",
+            "frontier_connectors",
+        ],
     )
     .in_dir(root)
     .with_timeout(std::time::Duration::from_secs(300));
