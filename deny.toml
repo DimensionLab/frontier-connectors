@@ -22,6 +22,8 @@ allow = [
     "Ubuntu-font-1.0",
 ]
 
+exceptions = [{ allow = ["MPL-2.0"], crate = "option-ext" }]
+
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"

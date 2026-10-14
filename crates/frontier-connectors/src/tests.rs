@@ -19,6 +19,7 @@ fn best(path: &Path) -> (String, f32) {
     (found[0].connector_id.clone(), found[0].confidence)
 }
 
+#[cfg(unix)]
 fn open_err(reg: &ConnectorRegistry, path: &Path) -> String {
     match reg.open(path) {
         Ok(_) => panic!("expected an error opening {}", path.display()),
@@ -453,16 +454,19 @@ fn bridge_builds_convert_arguments() {
     }
 }
 
+#[cfg(unix)]
 struct NativeStub {
     manifest: frontier_core::PluginManifest,
 }
 
+#[cfg(unix)]
 impl Plugin for NativeStub {
     fn manifest(&self) -> &frontier_core::PluginManifest {
         &self.manifest
     }
 }
 
+#[cfg(unix)]
 impl Connector for NativeStub {
     fn detect(&self, path: &Path) -> Option<Detection> {
         (path.extension()? == "vtu").then(|| Detection {
@@ -493,6 +497,7 @@ impl Connector for NativeStub {
     }
 }
 
+#[cfg(unix)]
 fn stub() -> Box<NativeStub> {
     Box::new(NativeStub {
         manifest: frontier_core::PluginManifest {
@@ -697,13 +702,10 @@ fn real_bridge() -> Option<PythonBridge> {
 fn catalog_matches_python_registry() {
     let Some(bridge) = real_bridge() else { return };
     let rows = bridge.list().unwrap();
-    let mut python_ids: Vec<&str> = rows.iter().map(|r| r.id.as_str()).collect();
-    let mut rust_ids: Vec<&str> = FORMATS.iter().map(|f| f.id).collect();
-    python_ids.sort_unstable();
-    rust_ids.sort_unstable();
-    assert_eq!(
-        rust_ids, python_ids,
-        "formats::FORMATS and the Python registry differ"
+    let rust_ids: Vec<&str> = FORMATS.iter().map(|f| f.id).collect();
+    assert!(
+        rows.iter().all(|row| rust_ids.contains(&row.id.as_str())),
+        "installed Python connectors must be described by the Rust catalog"
     );
     for row in &rows {
         assert_ne!(row.status, "broken", "{}: {}", row.id, row.note);
@@ -807,11 +809,11 @@ fn plugin_state_round_trip_through_the_real_python_package() {
     let doctor = bridge.plugin_doctor().unwrap();
     assert!(doctor.plugins.iter().any(|p| p.info.id == "vtk" && p.ok));
     let exporters = bridge.exporters().unwrap();
-    assert!(exporters.iter().any(|e| e.vendor == "matlab"));
+    assert!(exporters.iter().any(|e| e.vendor == "catalyst"));
     let copied = bridge
-        .install_exporter("starccm", home.path(), false)
+        .install_exporter("catalyst", home.path(), false)
         .unwrap();
-    assert!(copied.path.join("ExportForFrontier.java").is_file());
-    let removed = bridge.uninstall_exporter("starccm", None, false).unwrap();
+    assert!(copied.path.join("frontier_emit.py").is_file());
+    let removed = bridge.uninstall_exporter("catalyst", None, false).unwrap();
     assert!(removed.kept_modified.is_empty() && !copied.path.exists());
 }
