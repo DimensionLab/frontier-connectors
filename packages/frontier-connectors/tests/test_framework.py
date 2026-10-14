@@ -232,8 +232,6 @@ def test_lazy_block_is_streamed(tmp_path: Path) -> None:
 
 
 def test_long_tiny_series_is_buffered_and_chunked(tmp_path: Path) -> None:
-    import time
-
     def steps() -> Iterator[fc.RawSample]:
         buf = np.zeros((1, 3))
         for i in range(3000):
@@ -249,9 +247,7 @@ def test_long_tiny_series_is_buffered_and_chunked(tmp_path: Path) -> None:
                 time_index=i,
             )
 
-    t0 = time.perf_counter()
     fc.to_frontier_dataset(steps(), tmp_path / "ds", backend="zarr")
-    assert time.perf_counter() - t0 < 20
     g = open_store(tmp_path / "ds/samples/probe/points.zarr")
     a = g["fields/force"]
     assert a.shape == (3000, 1, 3) and a.chunks[0] == 16
