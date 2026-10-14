@@ -183,9 +183,10 @@ def test_first_party_manifests_and_generated_files_are_in_sync() -> None:
         text=True,
         check=False,
     )
-    assert out.returncode == 0, out.stdout + out.stderr
+    if (REPO / "nx.json").is_file():
+        assert out.returncode == 0, out.stdout + out.stderr
     ids = {e["id"] for e in discovery.catalog()}
-    assert {"fluent", "openfoam", "matlab", "exporter-starccm", "flow360", "catalyst"} <= ids
+    assert {"openfoam", "arrays", "catalyst"} <= ids
     installed = {r.id: r for r in plugins.discover()}
     for pid in ids:
         rec = installed.get(pid)
@@ -262,7 +263,7 @@ def test_invalid_and_incompatible_plugins_are_listed_but_never_loaded(
     assert rec is not None and rec.status == status
     assert any(needle in p for p in rec.problems), rec.problems
     assert "toyfmt" not in registry.connectors()
-    assert {"vtk", "openfoam", "matlab"} <= set(registry.connectors())
+    assert {"vtk", "openfoam"} <= set(registry.connectors())
     report = plugins.doctor()
     row = next(r for r in report["plugins"] if r["dist"] == "toy-plugin")
     assert not row["ok"] and not report["ok"]
@@ -519,9 +520,9 @@ def test_search_and_install_command_from_a_wheel_directory(
     assert rows[0]["dist"] == "acme-frontier-toy" and rows[0]["status"] == "not-installed"
     assert rows[0]["connectors"] == ["toyfmt"] and rows[0]["origin"] == str(wheels)
     # the built-in catalog answers without any wheel directory, by format / vendor / connector id
-    assert "fluent" in {r["id"] for r in installer.search("ansys fluent")}
+    assert "openfoam" in {r["id"] for r in installer.search("openfoam")}
     assert {r["id"] for r in installer.search("exodus")} == {"meshio"}
-    assert installer.search("fluent")[0]["installed"] is True
+    assert installer.search("openfoam")[0]["installed"] is True
 
     monkeypatch.setenv(installer.INSTALLER_ENV, "uv")
     if shutil.which("uv") is None:

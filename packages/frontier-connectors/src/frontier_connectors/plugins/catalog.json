@@ -1,1544 +1,507 @@
 {
- "schema": "frontier-plugin-catalog/1",
- "generated_by": "tools/sync_plugins.py",
- "plugins": [
-  {
-   "id": "abaqus",
-   "dist": "frontier-connector-abaqus",
-   "kind": "connector",
-   "name": "Abaqus and CalculiX",
-   "summary": "Abaqus .fil results, .odb exports and .inp decks; CalculiX .frd",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Dassault Systemes SIMULIA (Abaqus); CalculiX is open source",
-   "formats": [
-    "abaqus-odb-export",
-    "abaqus-fil",
-    "abaqus-inp",
-    "calculix-frd",
-    "abaqus-odb"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [
-    "exporter-abaqus"
-   ],
-   "optional": [],
-   "connectors": [
-    "abaqus"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "acusolve",
-   "dist": "frontier-connector-acusolve",
-   "kind": "connector",
-   "name": "Altair AcuSolve",
-   "summary": "AcuSolve problem directories through the acuTrans EnSight export",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Altair",
-   "formats": [
-    "acusolve-problem",
-    "ensight-gold"
-   ],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [
-    "ensight"
-   ],
-   "suggests": [
-    "exporter-acusolve"
-   ],
-   "optional": [],
-   "connectors": [
-    "acusolve"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "ansys",
-   "dist": "frontier-connector-ansys",
-   "kind": "connector",
-   "name": "Ansys CFX and Mechanical",
-   "summary": "Ansys CFX exports and Mechanical / MAPDL .rst and .rth results",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Ansys",
-   "formats": [
-    "cfx-export",
-    "cfdpost-csv",
-    "cfx-res",
-    "ansys-rst",
-    "ansys-rth",
-    "ansys-rmg"
-   ],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [
-    "vtk>=9.3"
-   ],
-   "plugins": [
-    "ensight",
-    "cgns"
-   ],
-   "suggests": [
-    "exporter-cfx",
-    "exporter-ansys-mechanical"
-   ],
-   "optional": [
+  "schema": "frontier-plugin-catalog/1",
+  "generated_by": "tools/sync_plugins.py",
+  "plugins": [
     {
-     "package": "ansys-mapdl-reader",
-     "licence": "MIT",
-     "purpose": "read .rst/.rth result files without an Ansys licence",
-     "module": "ansys.mapdl.reader",
-     "extra": "rst",
-     "requirement": "ansys-mapdl-reader>=0.54"
+      "id": "arrays",
+      "dist": "frontier-connector-arrays",
+      "kind": "connector",
+      "name": "Array stores (NetCDF, HDF5, Zarr)",
+      "summary": "NetCDF 3/4, generic HDF5 and Zarr v2/v3",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "Unidata (open format)",
+      "formats": [
+        "netcdf4",
+        "netcdf3",
+        "cf",
+        "ugrid",
+        "hdf5",
+        "zarr",
+        "zarr-v2",
+        "zarr-v3",
+        "frontier-dataset"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [
+        "h5py>=3.10",
+        "scipy>=1.13",
+        "zarr>=3.0"
+      ],
+      "plugins": [],
+      "suggests": [],
+      "optional": [
+        {
+          "package": "xarray",
+          "licence": "Apache-2.0",
+          "purpose": "open GRIB, OPeNDAP and multi-file datasets (engine=xarray)",
+          "module": "xarray",
+          "extra": "xarray",
+          "requirement": "xarray>=2024.1"
+        }
+      ],
+      "connectors": [
+        "hdf5",
+        "netcdf",
+        "zarr"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
     },
     {
-     "package": "ansys-dpf-core",
-     "licence": "MIT",
-     "purpose": "run the DPF exporter script",
-     "module": "ansys.dpf.core",
-     "flag": "needs a licensed Ansys installation"
-    }
-   ],
-   "connectors": [
-    "ansys-rst",
-    "cfx"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "arrays",
-   "dist": "frontier-connector-arrays",
-   "kind": "connector",
-   "name": "Array stores (NetCDF, HDF5, Zarr)",
-   "summary": "NetCDF 3/4, generic HDF5 and Zarr v2/v3",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Unidata (open format)",
-   "formats": [
-    "netcdf4",
-    "netcdf3",
-    "cf",
-    "ugrid",
-    "hdf5",
-    "zarr",
-    "zarr-v2",
-    "zarr-v3",
-    "frontier-dataset"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "h5py>=3.10",
-    "scipy>=1.13",
-    "zarr>=3.0"
-   ],
-   "plugins": [],
-   "suggests": [],
-   "optional": [
-    {
-     "package": "xarray",
-     "licence": "Apache-2.0",
-     "purpose": "open GRIB, OPeNDAP and multi-file datasets (engine=xarray)",
-     "module": "xarray",
-     "extra": "xarray",
-     "requirement": "xarray>=2024.1"
-    }
-   ],
-   "connectors": [
-    "hdf5",
-    "netcdf",
-    "zarr"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "catalyst",
-   "dist": "frontier-connector-catalyst",
-   "kind": "connector",
-   "name": "ParaView Catalyst 2 / in-situ streams",
-   "summary": "In-situ streams: Conduit Blueprint spool, relay files, ADIOS2",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Kitware / LLNL / ORNL (open source)",
-   "formats": [
-    "frontier-spool",
-    "conduit-blueprint",
-    "conduit-relay",
-    "adios2-bp",
-    "adios2-sst"
-   ],
-   "maturity": "verified-synthetic",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [
-    "exporter-catalyst"
-   ],
-   "optional": [
-    {
-     "package": "adios2",
-     "module": "adios2",
-     "licence": "Apache-2.0",
-     "purpose": "read ADIOS2 BP4/BP5 files and follow BP5/SST streams",
-     "extra": "adios2",
-     "requirement": "adios2>=2.10"
+      "id": "catalyst",
+      "dist": "frontier-connector-catalyst",
+      "kind": "connector",
+      "name": "ParaView Catalyst 2 / in-situ streams",
+      "summary": "In-situ streams: Conduit Blueprint spool, relay files, ADIOS2",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "Kitware / LLNL / ORNL (open source)",
+      "formats": [
+        "frontier-spool",
+        "conduit-blueprint",
+        "conduit-relay",
+        "adios2-bp",
+        "adios2-sst"
+      ],
+      "maturity": "verified-synthetic",
+      "licence": "Apache-2.0",
+      "requires": [],
+      "plugins": [],
+      "suggests": [
+        "exporter-catalyst"
+      ],
+      "optional": [
+        {
+          "package": "adios2",
+          "module": "adios2",
+          "licence": "Apache-2.0",
+          "purpose": "read ADIOS2 BP4/BP5 files and follow BP5/SST streams",
+          "extra": "adios2",
+          "requirement": "adios2>=2.10"
+        },
+        {
+          "package": "h5py",
+          "module": "h5py",
+          "licence": "BSD-3-Clause",
+          "purpose": "read Conduit relay Blueprint files written with the hdf5 protocol",
+          "extra": "hdf5",
+          "requirement": "h5py>=3.10"
+        },
+        {
+          "package": "pyyaml",
+          "module": "yaml",
+          "licence": "MIT",
+          "purpose": "read Conduit relay Blueprint files written with the yaml protocol",
+          "extra": "yaml",
+          "requirement": "pyyaml>=6"
+        },
+        {
+          "package": "conduit",
+          "module": "conduit",
+          "licence": "BSD-3-Clause",
+          "purpose": "pass conduit.Node objects to the Blueprint bridge directly",
+          "flag": "LLNL Conduit is not on PyPI (the PyPI project named conduit is unrelated): build it from https://github.com/LLNL/conduit or use Spack"
+        }
+      ],
+      "connectors": [
+        "catalyst"
+      ],
+      "importers": [
+        "catalyst"
+      ],
+      "exporters": [],
+      "auth": []
     },
     {
-     "package": "h5py",
-     "module": "h5py",
-     "licence": "BSD-3-Clause",
-     "purpose": "read Conduit relay Blueprint files written with the hdf5 protocol",
-     "extra": "hdf5",
-     "requirement": "h5py>=3.10"
+      "id": "cgns",
+      "dist": "frontier-connector-cgns",
+      "kind": "connector",
+      "name": "CGNS",
+      "summary": "CGNS files (HDF5 and ADF)",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "CGNS Steering Committee (open standard)",
+      "formats": [
+        "cgns-hdf5",
+        "cgns-adf"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [
+        "h5py>=3.10",
+        "vtk>=9.3"
+      ],
+      "plugins": [
+        "ensight"
+      ],
+      "suggests": [],
+      "optional": [],
+      "connectors": [
+        "cgns"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
     },
     {
-     "package": "pyyaml",
-     "module": "yaml",
-     "licence": "MIT",
-     "purpose": "read Conduit relay Blueprint files written with the yaml protocol",
-     "extra": "yaml",
-     "requirement": "pyyaml>=6"
+      "id": "code-saturne",
+      "dist": "frontier-connector-code-saturne",
+      "kind": "connector",
+      "name": "code_saturne",
+      "summary": "code_saturne postprocessing output",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "EDF (open source, GPL solver; open output formats)",
+      "formats": [
+        "code-saturne-resu",
+        "ensight-gold",
+        "med"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [],
+      "plugins": [
+        "ensight",
+        "meshio",
+        "cgns"
+      ],
+      "suggests": [],
+      "optional": [],
+      "connectors": [
+        "code-saturne"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
     },
     {
-     "package": "conduit",
-     "module": "conduit",
-     "licence": "BSD-3-Clause",
-     "purpose": "pass conduit.Node objects to the Blueprint bridge directly",
-     "flag": "LLNL Conduit is not on PyPI (the PyPI project named conduit is unrelated): build it from https://github.com/LLNL/conduit or use Spack"
-    }
-   ],
-   "connectors": [
-    "catalyst"
-   ],
-   "importers": [
-    "catalyst"
-   ],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "cgns",
-   "dist": "frontier-connector-cgns",
-   "kind": "connector",
-   "name": "CGNS",
-   "summary": "CGNS files (HDF5 and ADF)",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "CGNS Steering Committee (open standard)",
-   "formats": [
-    "cgns-hdf5",
-    "cgns-adf"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "h5py>=3.10",
-    "vtk>=9.3"
-   ],
-   "plugins": [
-    "ensight"
-   ],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "cgns"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "code-saturne",
-   "dist": "frontier-connector-code-saturne",
-   "kind": "connector",
-   "name": "code_saturne",
-   "summary": "code_saturne postprocessing output",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "EDF (open source, GPL solver; open output formats)",
-   "formats": [
-    "code-saturne-resu",
-    "ensight-gold",
-    "med"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [
-    "ensight",
-    "meshio",
-    "cgns"
-   ],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "code-saturne"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "comsol",
-   "dist": "frontier-connector-comsol",
-   "kind": "connector",
-   "name": "COMSOL Multiphysics",
-   "summary": "COMSOL data exports: sectionwise, spreadsheet, grid text, VTU",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "COMSOL AB",
-   "formats": [
-    "comsol-sectionwise",
-    "comsol-spreadsheet",
-    "comsol-grid",
-    "comsol-vtu",
-    "comsol-export-dir"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [
-    "vtk"
-   ],
-   "suggests": [
-    "exporter-comsol"
-   ],
-   "optional": [
-    {
-     "package": "mph",
-     "licence": "MIT",
-     "purpose": "export through a running COMSOL",
-     "module": "mph",
-     "flag": "needs a licensed COMSOL Multiphysics"
-    }
-   ],
-   "connectors": [
-    "comsol"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "converge",
-   "dist": "frontier-connector-converge",
-   "kind": "connector",
-   "name": "CONVERGE CFD",
-   "summary": "CONVERGE 3.x HDF5 post files and post_convert exports",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Convergent Science",
-   "formats": [
-    "converge-post-h5",
-    "converge-post-out",
-    "ensight-gold"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "vtk>=9.3",
-    "h5py>=3.10"
-   ],
-   "plugins": [
-    "ensight"
-   ],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "converge"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "ensight",
-   "dist": "frontier-connector-ensight",
-   "kind": "connector",
-   "name": "EnSight Gold",
-   "summary": "EnSight Gold and EnSight 6 case files",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Ansys/CEI (openly documented format)",
-   "formats": [
-    "ensight-gold",
-    "ensight6"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "vtk>=9.3"
-   ],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "ensight"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "exporter-abaqus",
-   "dist": "frontier-exporter-abaqus",
-   "kind": "exporter",
-   "name": "Abaqus (abaqus python) exporter scripts",
-   "summary": "Export script for Abaqus .odb files",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Abaqus",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "abaqus"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-acusolve",
-   "dist": "frontier-exporter-acusolve",
-   "kind": "exporter",
-   "name": "Altair AcuSolve (acuTrans) exporter scripts",
-   "summary": "acuTrans wrapper scripts for Altair AcuSolve",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Altair AcuSolve (acuTrans)",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "acusolve"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-ansys-mechanical",
-   "dist": "frontier-exporter-ansys-mechanical",
-   "kind": "exporter",
-   "name": "Ansys Mechanical / DPF exporter scripts",
-   "summary": "DPF export script for Ansys Mechanical",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Ansys Mechanical / DPF",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "ansys-mechanical"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-catalyst",
-   "dist": "frontier-exporter-catalyst",
-   "kind": "exporter",
-   "name": "ParaView Catalyst 2 / in-situ emitter",
-   "summary": "Solver-side emitter and Catalyst 2 pipeline script for in-situ streaming",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Kitware (open source)",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "catalyst"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-cfx",
-   "dist": "frontier-exporter-cfx",
-   "kind": "exporter",
-   "name": "Ansys CFX (cfx5export, CFD-Post) exporter scripts",
-   "summary": "Export scripts for Ansys CFX (cfx5export, CFD-Post)",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Ansys CFX",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "cfx"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-comsol",
-   "dist": "frontier-exporter-comsol",
-   "kind": "exporter",
-   "name": "COMSOL Multiphysics exporter scripts",
-   "summary": "Export scripts for COMSOL Multiphysics",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "COMSOL Multiphysics",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "comsol"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-fluent",
-   "dist": "frontier-exporter-fluent",
-   "kind": "exporter",
-   "name": "Ansys Fluent (PyFluent or journal) exporter scripts",
-   "summary": "Export scripts for Ansys Fluent (PyFluent or journal)",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Ansys Fluent",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "fluent"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-matlab",
-   "dist": "frontier-exporter-matlab",
-   "kind": "exporter",
-   "name": "MATLAB / GNU Octave exporter scripts",
-   "summary": "+frontier export package for MATLAB and GNU Octave",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "MATLAB / GNU Octave",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "matlab"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-optistruct",
-   "dist": "frontier-exporter-optistruct",
-   "kind": "exporter",
-   "name": "Altair HyperView / HyperMesh / Radioss exporter scripts",
-   "summary": "Export scripts for Altair HyperView, HyperMesh and Radioss",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Altair",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "optistruct"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-powerflow",
-   "dist": "frontier-exporter-powerflow",
-   "kind": "exporter",
-   "name": "SIMULIA PowerFLOW (pf2ens / exaritool) exporter scripts",
-   "summary": "Export script for SIMULIA PowerFLOW (pf2ens, exaritool)",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "SIMULIA PowerFLOW (pf2ens / exaritool)",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "powerflow"
-   ],
-   "auth": []
-  },
-  {
-   "id": "exporter-starccm",
-   "dist": "frontier-exporter-starccm",
-   "kind": "exporter",
-   "name": "Siemens STAR-CCM+ exporter scripts",
-   "summary": "Export macro for Siemens STAR-CCM+",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Siemens STAR-CCM+",
-   "formats": [],
-   "maturity": "exporter+reader",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [],
-   "importers": [],
-   "exporters": [
-    "starccm"
-   ],
-   "auth": []
-  },
-  {
-   "id": "fidelity",
-   "dist": "frontier-connector-fidelity",
-   "kind": "connector",
-   "name": "Cadence Fidelity / NUMECA FINE",
-   "summary": "Cadence Fidelity / NUMECA FINE projects",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Cadence (NUMECA)",
-   "formats": [
-    "fine-project",
-    "fine-run",
-    "cgns"
-   ],
-   "maturity": "verified-synthetic",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [
-    "cgns"
-   ],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "fidelity"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "flow360",
-   "dist": "frontier-connector-flow360",
-   "kind": "connector",
-   "name": "Flexcompute Flow360",
-   "summary": "Flexcompute Flow360 cases: settings, mesh statistics, results",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Flexcompute",
-   "formats": [
-    "flow360-reference",
-    "flow360-download"
-   ],
-   "maturity": "implemented-unverified-live",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [
-    {
-     "package": "flow360",
-     "licence": "LGPL-2.1-only",
-     "purpose": "download case result files (served from object storage through the Flexcompute client)",
-     "module": "flow360",
-     "flag": "LGPL-2.1 (optional, never bundled); needs a Flexcompute account"
-    }
-   ],
-   "connectors": [
-    "flow360"
-   ],
-   "importers": [
-    "flow360"
-   ],
-   "exporters": [],
-   "auth": [
-    {
-     "id": "flow360",
-     "title": "Flexcompute Flow360",
-     "kind": "api_key",
-     "fields": [
-      {
-       "name": "api_key",
-       "title": "API key",
-       "secret": true,
-       "required": true,
-       "env": [
-        "FLOW360_APIKEY"
-       ]
-      }
-     ],
-     "env": [
-      "FLOW360_APIKEY"
-     ],
-     "help_url": "https://flow360.simulation.cloud/account",
-     "scopes_hint": "read access to the projects and cases to import"
-    }
-   ]
-  },
-  {
-   "id": "fluent",
-   "dist": "frontier-connector-fluent",
-   "kind": "connector",
-   "name": "Ansys Fluent",
-   "summary": "Fluent CFF and legacy case / data files, live PyFluent sessions",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Ansys",
-   "formats": [
-    "fluent-cff",
-    "fluent-legacy",
-    "fluent-session",
-    "fluent-export"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "h5py>=3.10",
-    "vtk>=9.3"
-   ],
-   "plugins": [],
-   "suggests": [
-    "exporter-fluent"
-   ],
-   "optional": [
-    {
-     "package": "ansys-fluent-core",
-     "licence": "MIT",
-     "purpose": "drive a live Fluent session (PyFluent, fluent-live); not needed for the journal path",
-     "module": "ansys.fluent.core",
-     "flag": "needs a licensed Ansys Fluent installation"
-    }
-   ],
-   "connectors": [
-    "fluent-cff",
-    "fluent-legacy",
-    "fluent-live"
-   ],
-   "importers": [
-    "fluent-live"
-   ],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "geometry",
-   "dist": "frontier-connector-geometry",
-   "kind": "connector",
-   "name": "Geometry",
-   "summary": "STL, OBJ, PLY, OFF surfaces; STEP, IGES, BREP",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "open formats",
-   "formats": [
-    "stl",
-    "obj",
-    "ply",
-    "off",
-    "step",
-    "iges",
-    "brep"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [
-    {
-     "package": "cadquery-ocp",
-     "licence": "Apache-2.0",
-     "purpose": "tessellate STEP / IGES / BREP",
-     "module": "OCP",
-     "flag": "wraps OpenCascade (LGPL-2.1 with exception)"
+      "id": "ensight",
+      "dist": "frontier-connector-ensight",
+      "kind": "connector",
+      "name": "EnSight Gold",
+      "summary": "EnSight Gold and EnSight 6 case files",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "Ansys/CEI (openly documented format)",
+      "formats": [
+        "ensight-gold",
+        "ensight6"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [
+        "vtk>=9.3"
+      ],
+      "plugins": [],
+      "suggests": [],
+      "optional": [],
+      "connectors": [
+        "ensight"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
     },
     {
-     "package": "gmsh",
-     "licence": "GPL-2.0-or-later",
-     "purpose": "tessellate CAD with gmsh (only with tessellator='gmsh')",
-     "module": "gmsh",
-     "flag": "GPL: never imported unless requested"
-    }
-   ],
-   "connectors": [
-    "geometry"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "lsdyna",
-   "dist": "frontier-connector-lsdyna",
-   "kind": "connector",
-   "name": "LS-DYNA",
-   "summary": "LS-DYNA d3plot results and keyword decks",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Ansys LST (LS-DYNA)",
-   "formats": [
-    "d3plot",
-    "lsdyna-keyword"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [
-    {
-     "package": "lasso-python",
-     "licence": "BSD-3-Clause",
-     "purpose": "read d3plot through lasso-python instead of the built-in reader",
-     "module": "lasso"
+      "id": "exporter-catalyst",
+      "dist": "frontier-exporter-catalyst",
+      "kind": "exporter",
+      "name": "ParaView Catalyst 2 / in-situ emitter",
+      "summary": "Solver-side emitter and Catalyst 2 pipeline script for in-situ streaming",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "Kitware (open source)",
+      "formats": [],
+      "maturity": "exporter+reader",
+      "licence": "Apache-2.0",
+      "requires": [],
+      "plugins": [],
+      "suggests": [],
+      "optional": [],
+      "connectors": [],
+      "importers": [],
+      "exporters": [
+        "catalyst"
+      ],
+      "auth": []
     },
     {
-     "package": "vtk",
-     "licence": "BSD-3-Clause",
-     "purpose": "read d3plot through vtkLSDynaReader instead of the built-in reader",
-     "module": "vtkmodules"
-    }
-   ],
-   "connectors": [
-    "lsdyna"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "luminary",
-   "dist": "frontier-connector-luminary",
-   "kind": "connector",
-   "name": "Luminary Cloud",
-   "summary": "Luminary Cloud simulations: settings, mesh metadata, solutions",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Luminary Cloud",
-   "formats": [
-    "luminary-reference",
-    "luminary-download"
-   ],
-   "maturity": "implemented-unverified-live",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [
+      "id": "geometry",
+      "dist": "frontier-connector-geometry",
+      "kind": "connector",
+      "name": "Geometry",
+      "summary": "STL, OBJ, PLY, OFF surfaces; STEP, IGES, BREP",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "open formats",
+      "formats": [
+        "stl",
+        "obj",
+        "ply",
+        "off",
+        "step",
+        "iges",
+        "brep"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [],
+      "plugins": [],
+      "suggests": [],
+      "optional": [
+        {
+          "package": "cadquery-ocp",
+          "licence": "Apache-2.0",
+          "purpose": "tessellate STEP / IGES / BREP",
+          "module": "OCP",
+          "flag": "wraps OpenCascade (LGPL-2.1 with exception)"
+        },
+        {
+          "package": "gmsh",
+          "licence": "GPL-2.0-or-later",
+          "purpose": "tessellate CAD with gmsh (only with tessellator='gmsh')",
+          "module": "gmsh",
+          "flag": "GPL: never imported unless requested"
+        }
+      ],
+      "connectors": [
+        "geometry"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
+    },
     {
-     "package": "luminarycloud",
-     "licence": "LicenseRef-Luminary-SDK",
-     "purpose": "every call (Luminary Cloud has no public REST API; the SDK talks gRPC)",
-     "module": "luminarycloud",
-     "flag": "proprietary (no licence on PyPI, Early Access terms); needs a Luminary Cloud account"
-    }
-   ],
-   "connectors": [
-    "luminary"
-   ],
-   "importers": [
-    "luminary"
-   ],
-   "exporters": [],
-   "auth": [
+      "id": "meshio",
+      "dist": "frontier-connector-meshio",
+      "kind": "connector",
+      "name": "Mesh formats (Exodus II, XDMF, Gmsh, MED, SU2, meshio)",
+      "summary": "Exodus II, XDMF, Gmsh MSH, MED, SU2 and other meshio formats",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "Sandia National Laboratories (open format)",
+      "formats": [
+        "exodus-ii",
+        "xdmf3",
+        "xdmf2",
+        "gmsh-msh",
+        "med",
+        "su2-mesh",
+        "medit",
+        "netgen",
+        "tetgen",
+        "ugrid",
+        "h5m",
+        "flac3d",
+        "permas",
+        "dolfin-xml",
+        "avsucd",
+        "mdpa",
+        "hmf"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [
+        "meshio>=5.3",
+        "vtk>=9.3",
+        "h5py>=3.10"
+      ],
+      "plugins": [],
+      "suggests": [],
+      "optional": [],
+      "connectors": [
+        "exodus",
+        "gmsh",
+        "med",
+        "meshio",
+        "su2",
+        "xdmf"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
+    },
     {
-     "id": "luminary",
-     "title": "Luminary Cloud",
-     "kind": "api_key",
-     "fields": [
-      {
-       "name": "api_key",
-       "title": "API key",
-       "secret": true,
-       "required": true,
-       "env": [
-        "LC_API_KEY"
-       ]
-      }
-     ],
-     "env": [
-      "LC_API_KEY"
-     ],
-     "help_url": "https://app.luminarycloud.com/account/api-keys",
-     "scopes_hint": "read access to the projects and simulations to import"
-    }
-   ]
-  },
-  {
-   "id": "matlab",
-   "dist": "frontier-connector-matlab",
-   "kind": "connector",
-   "name": "MATLAB and GNU Octave",
-   "summary": "MAT-files v4 to v7.3 and GNU Octave save files",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "MathWorks",
-   "formats": [
-    "mat-v7.3",
-    "mat-v5",
-    "mat-v4",
-    "octave-text",
-    "octave-binary",
-    "octave-hdf5"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "scipy>=1.13",
-    "h5py>=3.10"
-   ],
-   "plugins": [],
-   "suggests": [
-    "exporter-matlab"
-   ],
-   "optional": [
+      "id": "nek5000",
+      "dist": "frontier-connector-nek5000",
+      "kind": "connector",
+      "name": "Nek5000 / NekRS",
+      "summary": "Nek5000 and NekRS binary field files",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "Argonne National Laboratory (open source)",
+      "formats": [
+        "nek5000-fld-binary"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [
+        "scipy>=1.13"
+      ],
+      "plugins": [],
+      "suggests": [],
+      "optional": [],
+      "connectors": [
+        "nek5000"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
+    },
     {
-     "package": "matlabengine",
-     "licence": "LicenseRef-MathWorks-Proprietary",
-     "purpose": "export through a live MATLAB session",
-     "module": "matlab.engine",
-     "flag": "proprietary; needs a licensed MATLAB"
-    }
-   ],
-   "connectors": [
-    "matlab",
-    "octave"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "meshio",
-   "dist": "frontier-connector-meshio",
-   "kind": "connector",
-   "name": "Mesh formats (Exodus II, XDMF, Gmsh, MED, SU2, meshio)",
-   "summary": "Exodus II, XDMF, Gmsh MSH, MED, SU2 and other meshio formats",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Sandia National Laboratories (open format)",
-   "formats": [
-    "exodus-ii",
-    "xdmf3",
-    "xdmf2",
-    "gmsh-msh",
-    "med",
-    "su2-mesh",
-    "medit",
-    "netgen",
-    "tetgen",
-    "ugrid",
-    "h5m",
-    "flac3d",
-    "permas",
-    "dolfin-xml",
-    "avsucd",
-    "mdpa",
-    "hmf"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "meshio>=5.3",
-    "vtk>=9.3",
-    "h5py>=3.10"
-   ],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "exodus",
-    "gmsh",
-    "med",
-    "meshio",
-    "su2",
-    "xdmf"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "nastran",
-   "dist": "frontier-connector-nastran",
-   "kind": "connector",
-   "name": "Nastran",
-   "summary": "Nastran BDF decks, OP2 and MSC HDF5 results",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Hexagon (MSC Nastran), Siemens (Simcenter Nastran), Altair (OptiStruct)",
-   "formats": [
-    "nastran-bdf",
-    "nastran-op2",
-    "nastran-h5"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "h5py>=3.10"
-   ],
-   "plugins": [],
-   "suggests": [],
-   "optional": [
+      "id": "openfoam",
+      "dist": "frontier-connector-openfoam",
+      "kind": "connector",
+      "name": "OpenFOAM",
+      "summary": "OpenFOAM case directories",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "OpenFOAM Foundation / OpenCFD (ESI) / foam-extend (open format)",
+      "formats": [
+        "openfoam"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [
+        "vtk>=9.3",
+        "scipy>=1.13"
+      ],
+      "plugins": [],
+      "suggests": [],
+      "optional": [],
+      "connectors": [
+        "openfoam"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
+    },
     {
-     "package": "pyNastran",
-     "licence": "BSD-3-Clause",
-     "purpose": "read OP2 result files",
-     "module": "pyNastran",
-     "flag": "pins numpy below 2: install in its own environment"
-    }
-   ],
-   "connectors": [
-    "nastran"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "nek5000",
-   "dist": "frontier-connector-nek5000",
-   "kind": "connector",
-   "name": "Nek5000 / NekRS",
-   "summary": "Nek5000 and NekRS binary field files",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Argonne National Laboratory (open source)",
-   "formats": [
-    "nek5000-fld-binary"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "scipy>=1.13"
-   ],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "nek5000"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "openfoam",
-   "dist": "frontier-connector-openfoam",
-   "kind": "connector",
-   "name": "OpenFOAM",
-   "summary": "OpenFOAM case directories",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "OpenFOAM Foundation / OpenCFD (ESI) / foam-extend (open format)",
-   "formats": [
-    "openfoam"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "vtk>=9.3",
-    "scipy>=1.13"
-   ],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "openfoam"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "optistruct",
-   "dist": "frontier-connector-optistruct",
-   "kind": "connector",
-   "name": "Altair OptiStruct / Radioss",
-   "summary": "OptiStruct decks, OP2 and punch results; Radioss animation files",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Altair",
-   "formats": [
-    "optistruct-fem",
-    "nastran-op2",
-    "nastran-punch",
-    "optistruct-hv-export",
-    "radioss-anim",
-    "radioss-deck"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [
-    "nastran"
-   ],
-   "suggests": [
-    "exporter-optistruct"
-   ],
-   "optional": [
+      "id": "palabos",
+      "dist": "frontier-connector-palabos",
+      "kind": "connector",
+      "name": "Palabos",
+      "summary": "Palabos VTK image output directories",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "University of Geneva / FlowKit (open source, AGPL solver; open output format)",
+      "formats": [
+        "palabos-vtk",
+        "vtk-xml"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [],
+      "plugins": [
+        "vtk"
+      ],
+      "suggests": [],
+      "optional": [],
+      "connectors": [
+        "palabos"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
+    },
     {
-     "package": "pyNastran",
-     "module": "pyNastran",
-     "licence": "BSD-3-Clause",
-     "purpose": "read OptiStruct OP2 results (OUTPUT,OP2) through the nastran connector",
-     "flag": "pins numpy<2; punch files (OUTPUT,PUNCH) need no extra package"
-    }
-   ],
-   "connectors": [
-    "optistruct",
-    "radioss"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "palabos",
-   "dist": "frontier-connector-palabos",
-   "kind": "connector",
-   "name": "Palabos",
-   "summary": "Palabos VTK image output directories",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "University of Geneva / FlowKit (open source, AGPL solver; open output format)",
-   "formats": [
-    "palabos-vtk",
-    "vtk-xml"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [
-    "vtk"
-   ],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "palabos"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "powerflow",
-   "dist": "frontier-connector-powerflow",
-   "kind": "connector",
-   "name": "SIMULIA PowerFLOW",
-   "summary": "PowerFLOW .snc surface measurements and EnSight exports",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Dassault Systemes SIMULIA (Exa)",
-   "formats": [
-    "powerflow-snc",
-    "powerflow-export",
-    "ensight-gold"
-   ],
-   "maturity": "verified-synthetic",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [
-    "ensight"
-   ],
-   "suggests": [
-    "exporter-powerflow"
-   ],
-   "optional": [
+      "id": "pyfr",
+      "dist": "frontier-connector-pyfr",
+      "kind": "connector",
+      "name": "PyFR",
+      "summary": "PyFR mesh and solution files",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "PyFR (open source, Imperial College London / Texas A&M)",
+      "formats": [
+        "pyfr-v3",
+        "pyfr-legacy"
+      ],
+      "maturity": "verified-synthetic",
+      "licence": "Apache-2.0",
+      "requires": [
+        "h5py>=3.10"
+      ],
+      "plugins": [],
+      "suggests": [],
+      "optional": [],
+      "connectors": [
+        "pyfr"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
+    },
     {
-     "package": "h5py",
-     "module": "h5py",
-     "licence": "BSD-3-Clause",
-     "purpose": "read a measurement file stored in a NetCDF-4/HDF5 container",
-     "flag": ""
-    }
-   ],
-   "connectors": [
-    "powerflow"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "pyfr",
-   "dist": "frontier-connector-pyfr",
-   "kind": "connector",
-   "name": "PyFR",
-   "summary": "PyFR mesh and solution files",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "PyFR (open source, Imperial College London / Texas A&M)",
-   "formats": [
-    "pyfr-v3",
-    "pyfr-legacy"
-   ],
-   "maturity": "verified-synthetic",
-   "licence": "Apache-2.0",
-   "requires": [
-    "h5py>=3.10"
-   ],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "pyfr"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "rescale",
-   "dist": "frontier-connector-rescale",
-   "kind": "connector",
-   "name": "Rescale",
-   "summary": "Rescale jobs: runs, design variables, output files",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Rescale",
-   "formats": [
-    "rescale-reference",
-    "rescale-download"
-   ],
-   "maturity": "implemented-unverified-live",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "rescale"
-   ],
-   "importers": [
-    "rescale"
-   ],
-   "exporters": [],
-   "auth": [
+      "id": "tabular",
+      "dist": "frontier-connector-tabular",
+      "kind": "connector",
+      "name": "Tabular point data",
+      "summary": "CSV, TSV and text tables, Parquet, OpenFOAM probes",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "open formats",
+      "formats": [
+        "csv",
+        "tsv",
+        "text-table",
+        "parquet",
+        "openfoam-probes"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [],
+      "plugins": [],
+      "suggests": [],
+      "optional": [
+        {
+          "package": "pyarrow",
+          "licence": "Apache-2.0",
+          "purpose": "read Parquet",
+          "module": "pyarrow",
+          "extra": "parquet",
+          "requirement": "pyarrow>=15"
+        }
+      ],
+      "connectors": [
+        "tabular"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
+    },
     {
-     "id": "rescale",
-     "title": "Rescale",
-     "kind": "api_key",
-     "fields": [
-      {
-       "name": "api_key",
-       "title": "API token",
-       "secret": true,
-       "required": true,
-       "env": [
-        "RESCALE_API_KEY"
-       ]
-      },
-      {
-       "name": "api_url",
-       "title": "Platform URL",
-       "secret": false,
-       "required": false,
-       "env": [
-        "RESCALE_API_URL"
-       ]
-      }
-     ],
-     "env": [
-      "RESCALE_API_KEY"
-     ],
-     "help_url": "https://platform.rescale.com/user/settings/api-key/",
-     "scopes_hint": "read access to the jobs whose output files are imported"
+      "id": "vtk",
+      "dist": "frontier-connector-vtk",
+      "kind": "connector",
+      "name": "VTK",
+      "summary": "VTK XML, legacy and VTKHDF files, PVD and .series time series",
+      "version": "0.9.0",
+      "data_model_version": "1.1",
+      "vendor": "Kitware (open format)",
+      "formats": [
+        "vtk-xml",
+        "vtk-legacy",
+        "vtkhdf",
+        "pvd"
+      ],
+      "maturity": "verified-public-sample",
+      "licence": "Apache-2.0",
+      "requires": [
+        "vtk>=9.3"
+      ],
+      "plugins": [],
+      "suggests": [],
+      "optional": [],
+      "connectors": [
+        "vtk"
+      ],
+      "importers": [],
+      "exporters": [],
+      "auth": []
     }
-   ]
-  },
-  {
-   "id": "simscale",
-   "dist": "frontier-connector-simscale",
-   "kind": "connector",
-   "name": "SimScale",
-   "summary": "SimScale runs: settings, mesh statistics, solution fields",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "SimScale",
-   "formats": [
-    "simscale-reference",
-    "simscale-download"
-   ],
-   "maturity": "implemented-unverified-live",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "simscale"
-   ],
-   "importers": [
-    "simscale"
-   ],
-   "exporters": [],
-   "auth": [
-    {
-     "id": "simscale",
-     "title": "SimScale",
-     "kind": "api_key",
-     "fields": [
-      {
-       "name": "api_key",
-       "title": "API key",
-       "secret": true,
-       "required": true,
-       "env": [
-        "SIMSCALE_API_KEY"
-       ]
-      },
-      {
-       "name": "api_url",
-       "title": "API URL",
-       "secret": false,
-       "required": false,
-       "env": [
-        "SIMSCALE_API_URL"
-       ]
-      }
-     ],
-     "env": [
-      "SIMSCALE_API_KEY"
-     ],
-     "help_url": "https://www.simscale.com/dashboard/user-settings/api-keys",
-     "scopes_hint": "read access to the projects and simulation runs to import"
-    }
-   ]
-  },
-  {
-   "id": "simulink",
-   "dist": "frontier-connector-simulink",
-   "kind": "connector",
-   "name": "Simulink / Simscape / FMU",
-   "summary": "Simulink and Simscape logs, FMU results and metadata",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "MathWorks / FMI standard",
-   "formats": [
-    "simulink-canonical",
-    "simulink-runs",
-    "simulink-mat",
-    "fmi-csv",
-    "dsres-mat",
-    "fmu",
-    "simulink-slx",
-    "simulink-mdl"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [
-    "matlab",
-    "tabular"
-   ],
-   "suggests": [
-    "exporter-matlab"
-   ],
-   "optional": [],
-   "connectors": [
-    "simulink"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "starccm",
-   "dist": "frontier-connector-starccm",
-   "kind": "connector",
-   "name": "Siemens STAR-CCM+",
-   "summary": "STAR-CCM+ exports: EnSight Gold, CGNS, XYZ tables",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Siemens Digital Industries Software",
-   "formats": [
-    "starccm-export",
-    "starccm-ensight",
-    "starccm-table",
-    "starccm-sim",
-    "ccmio"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [
-    "ensight",
-    "cgns"
-   ],
-   "suggests": [
-    "exporter-starccm"
-   ],
-   "optional": [],
-   "connectors": [
-    "starccm"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "tabular",
-   "dist": "frontier-connector-tabular",
-   "kind": "connector",
-   "name": "Tabular point data",
-   "summary": "CSV, TSV and text tables, Parquet, OpenFOAM probes",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "open formats",
-   "formats": [
-    "csv",
-    "tsv",
-    "text-table",
-    "parquet",
-    "openfoam-probes"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [],
-   "plugins": [],
-   "suggests": [],
-   "optional": [
-    {
-     "package": "pyarrow",
-     "licence": "Apache-2.0",
-     "purpose": "read Parquet",
-     "module": "pyarrow",
-     "extra": "parquet",
-     "requirement": "pyarrow>=15"
-    }
-   ],
-   "connectors": [
-    "tabular"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "tecplot",
-   "dist": "frontier-connector-tecplot",
-   "kind": "connector",
-   "name": "Tecplot",
-   "summary": "Tecplot ASCII .dat and binary .plt",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Tecplot, Inc. (documented formats)",
-   "formats": [
-    "tecplot-ascii",
-    "tecplot-plt",
-    "tecplot-szplt"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "meshio>=5.3"
-   ],
-   "plugins": [],
-   "suggests": [],
-   "optional": [
-    {
-     "package": "pytecplot",
-     "licence": "MIT",
-     "purpose": "convert .szplt through Tecplot 360",
-     "module": "tecplot",
-     "flag": "needs a licensed Tecplot 360"
-    }
-   ],
-   "connectors": [
-    "tecplot"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  },
-  {
-   "id": "vtk",
-   "dist": "frontier-connector-vtk",
-   "kind": "connector",
-   "name": "VTK",
-   "summary": "VTK XML, legacy and VTKHDF files, PVD and .series time series",
-   "version": "0.9.0",
-   "data_model_version": "1.1",
-   "vendor": "Kitware (open format)",
-   "formats": [
-    "vtk-xml",
-    "vtk-legacy",
-    "vtkhdf",
-    "pvd"
-   ],
-   "maturity": "verified-public-sample",
-   "licence": "Apache-2.0",
-   "requires": [
-    "vtk>=9.3"
-   ],
-   "plugins": [],
-   "suggests": [],
-   "optional": [],
-   "connectors": [
-    "vtk"
-   ],
-   "importers": [],
-   "exporters": [],
-   "auth": []
-  }
- ]
+  ]
 }
