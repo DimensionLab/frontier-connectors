@@ -366,8 +366,11 @@ def test_readme_support_matrix_is_generated_from_the_registry() -> None:
     table = readme[start : readme.index("<!-- matrix:end -->")].strip()
     # An installation may contain only the open plugins. Every installed row must be
     # documented, even when the monorepo's matrix also describes deferred plugins.
+    rows = {tuple(cell.strip() for cell in row.split("|")) for row in table.splitlines()}
     for row in registry.support_matrix_markdown().splitlines()[2:]:
-        assert row in table, f"README support matrix is missing {row}"
+        assert tuple(cell.strip() for cell in row.split("|")) in rows, (
+            f"README support matrix is missing {row}"
+        )
 
 
 def test_cli_list_detect_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
