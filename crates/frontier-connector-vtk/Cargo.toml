@@ -1,4 +1,5 @@
 [package]
+workspace = "../.."
 name = "frontier-connector-vtk"
 description = "VTK (legacy .vtk and XML .vtu/.vtp/.vtm) connector for Frontier"
 version.workspace = true

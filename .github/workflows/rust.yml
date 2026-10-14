@@ -43,6 +43,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: astral-sh/setup-uv@v6
       - run: python tools/bootstrap.py --skip-python
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: taiki-e/install-action@v2
         with:
-          command: check licenses sources
+          tool: cargo-deny@0.20.2
+      - run: cargo deny check licenses sources

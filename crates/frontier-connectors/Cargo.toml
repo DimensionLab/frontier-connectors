@@ -1,4 +1,5 @@
 [package]
+workspace = "../.."
 name = "frontier-connectors"
 description = "Connector plugin contract and registry for importing simulation results into Frontier datasets"
 version.workspace = true

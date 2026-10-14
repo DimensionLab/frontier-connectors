@@ -464,6 +464,9 @@ def main() -> int:
         current = path.read_text(encoding="utf-8") if path.is_file() else None
         if current == text:
             continue
+        if path.suffix == ".json" and path != MARKETPLACE and current is not None:
+            if json.loads(current) == json.loads(text):
+                continue
         if args.check and path == MARKETPLACE and current is not None:
             if _without_dates(current) == _without_dates(text):
                 continue
