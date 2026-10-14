@@ -15,7 +15,7 @@ python -m frontier_connectors plugins info openfoam
 
 ## Getting the data out
 
-Point at the case directory (system/, constant/polyMesh, time directories), a .foam stub inside it or system/controlDict. Decomposed cases (processor*/) are read directly; run reconstructPar first for the collated format (processors<N>/).
+Point at the case directory (system/, constant/polyMesh, time directories), a .foam stub inside it or system/controlDict. Decomposed cases (processor\*/) are read directly; run reconstructPar first for the collated format (processors<N>/).
 
 ## Requirements and licence
 

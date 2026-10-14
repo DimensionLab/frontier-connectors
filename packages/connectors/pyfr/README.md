@@ -11,7 +11,7 @@ python -m frontier_connectors plugins info pyfr
 
 ## Status
 
-`verified-synthetic`. Reads PyFR <= 2.1 files (spt_* / soln_* datasets) and PyFR 3.x files (eles / nodes, <prefix>/p<order>-<etype> with 'pts'). A solution becomes a point cloud of solution points (quad, hex, tri, tet, pri; legacy files only quad and hex with Gauss-Legendre or Lobatto points; no pyramids, no region subsets); a mesh alone becomes a linear corner mesh. Validated on generated files and on PyFR 3.1 and 2.1 output.
+`verified-synthetic`. Reads PyFR <= 2.1 files (spt*\* / soln*\* datasets) and PyFR 3.x files (eles / nodes, <prefix>/p<order>-<etype> with 'pts'). A solution becomes a point cloud of solution points (quad, hex, tri, tet, pri; legacy files only quad and hex with Gauss-Legendre or Lobatto points; no pyramids, no region subsets); a mesh alone becomes a linear corner mesh. Validated on generated files and on PyFR 3.1 and 2.1 output.
 
 ## Getting the data out
 

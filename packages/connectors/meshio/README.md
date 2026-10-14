@@ -29,7 +29,7 @@ python -m frontier_connectors plugins info meshio
 
 **`gmsh`**: Gmsh: File > Export > .msh (version 4.1 or 2.2; tick 'Save all elements' only if you have no physical groups). Post-processing views: Save 'Mesh-based' views into the .msh; parsed-view .pos files must be re-saved that way.
 
-**`med`**: Code_Aster: IMPR_RESU(FORMAT='MED', RESU=_F(RESULTAT=...)); Salome: File > Export > MED; Code_Saturne: writer format 'MED'. MED 2.1 files need Salome's medimport.
+**`med`**: Code_Aster: IMPR_RESU(FORMAT='MED', RESU=\_F(RESULTAT=...)); Salome: File > Export > MED; Code_Saturne: writer format 'MED'. MED 2.1 files need Salome's medimport.
 
 **`meshio`**: These are mesh formats: results usually live elsewhere (FUN3D: Tecplot/VTK, NGSolve: VTK, FEniCS: XDMF/PVD). Any other meshio format can be converted with `meshio convert in.xxx out.vtu` and read by the vtk connector.
 

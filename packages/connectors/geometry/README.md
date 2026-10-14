@@ -21,7 +21,7 @@ Any CAD or meshing tool exports STL / OBJ / PLY. For STEP / IGES / BREP install 
 
 Licence: Apache-2.0.
 
-| Optional package | Licence | Used to | Note |
-|---|---|---|---|
-| `cadquery-ocp` | Apache-2.0 | tessellate STEP / IGES / BREP | wraps OpenCascade (LGPL-2.1 with exception) |
-| `gmsh` | GPL-2.0-or-later | tessellate CAD with gmsh (only with tessellator='gmsh') | GPL: never imported unless requested |
+| Optional package | Licence          | Used to                                                 | Note                                        |
+| ---------------- | ---------------- | ------------------------------------------------------- | ------------------------------------------- |
+| `cadquery-ocp`   | Apache-2.0       | tessellate STEP / IGES / BREP                           | wraps OpenCascade (LGPL-2.1 with exception) |
+| `gmsh`           | GPL-2.0-or-later | tessellate CAD with gmsh (only with tessellator='gmsh') | GPL: never imported unless requested        |

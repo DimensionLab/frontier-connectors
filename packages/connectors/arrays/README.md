@@ -15,7 +15,7 @@ python -m frontier_connectors plugins info arrays
 
 **`netcdf`** (`verified-public-sample`): NetCDF-4 is read with h5py, NetCDF-3 classic and 64-bit-offset with scipy (memory-mapped). CF grids with 1-D coordinates and UGRID 2-D face meshes are detected automatically. Curvilinear grids, CDF-5, UGRID 1-D / 3-D-layered and DSG feature types need a mapping or options={'engine': 'xarray'}.
 
-**`zarr`** (`verified-synthetic`): Reads directory and .zip stores in Zarr v2 and v3. Dimension names come from _ARRAY_DIMENSIONS (v2) or dimension_names (v3); CF attributes are honoured as for NetCDF. Remote stores (s3://, gs://) are not opened. Validated on generated files only.
+**`zarr`** (`verified-synthetic`): Reads directory and .zip stores in Zarr v2 and v3. Dimension names come from \_ARRAY_DIMENSIONS (v2) or dimension_names (v3); CF attributes are honoured as for NetCDF. Remote stores (s3://, gs://) are not opened. Validated on generated files only.
 
 ## Getting the data out
 
@@ -29,6 +29,6 @@ python -m frontier_connectors plugins info arrays
 
 Licence: Apache-2.0. Installs `h5py>=3.10`, `scipy>=1.13`, `zarr>=3.0`.
 
-| Optional package | Licence | Used to | Note |
-|---|---|---|---|
-| `xarray` | Apache-2.0 | open GRIB, OPeNDAP and multi-file datasets (engine=xarray) |  |
+| Optional package | Licence    | Used to                                                    | Note |
+| ---------------- | ---------- | ---------------------------------------------------------- | ---- |
+| `xarray`         | Apache-2.0 | open GRIB, OPeNDAP and multi-file datasets (engine=xarray) |      |

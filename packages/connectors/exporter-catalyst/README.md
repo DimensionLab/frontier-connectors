@@ -17,11 +17,11 @@ python -m frontier_connectors plugins install-exporter catalyst --to <dir>
 
 Files: `README.txt`, `adaptor_example.txt`, `frontier_catalyst_pipeline.py`, `frontier_emit.py`. Usage is in `README.txt`.
 
-| File | Purpose |
-| --- | --- |
-| `frontier_emit.py` | numpy-only emitter of the `frontier-spool` protocol: atomic step files, header, end marker, restart support, mesh builders. It imports nothing from Frontier; copy it into the solver repository. |
+| File                            | Purpose                                                                                                                                                                                                                             |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `frontier_emit.py`              | numpy-only emitter of the `frontier-spool` protocol: atomic step files, header, end marker, restart support, mesh builders. It imports nothing from Frontier; copy it into the solver repository.                                   |
 | `frontier_catalyst_pipeline.py` | ParaView Catalyst 2 pipeline script. `--mode spool` converts a channel's VTK data to Blueprint and emits it (serial); `--mode vtk` adds a VTPD extractor (parallel; read with the `vtk` connector). Not validated against ParaView. |
-| `adaptor_example.txt` | the Conduit node a Catalyst 2 adaptor passes (C++, Fortran, Python), `CATALYST_IMPLEMENTATION_NAME` / `CATALYST_IMPLEMENTATION_PATHS`, other transports |
+| `adaptor_example.txt`           | the Conduit node a Catalyst 2 adaptor passes (C++, Fortran, Python), `CATALYST_IMPLEMENTATION_NAME` / `CATALYST_IMPLEMENTATION_PATHS`, other transports                                                                             |
 
 ```python
 from frontier_emit import Emitter, uniform_mesh

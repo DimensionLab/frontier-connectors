@@ -15,7 +15,7 @@ python -m frontier_connectors plugins info palabos
 
 ## Getting the data out
 
-No export step: Palabos writes VTK image data (VtkImageOutput2D/3D -> tmp/vtk*.vti, VtkStructuredImageOutput -> .vts). Point at the output directory (the one holding plbLog.dat) or at a single .vti file.
+No export step: Palabos writes VTK image data (VtkImageOutput2D/3D -> tmp/vtk\*.vti, VtkStructuredImageOutput -> .vts). Point at the output directory (the one holding plbLog.dat) or at a single .vti file.
 
 ## Requirements and licence
 

@@ -8,11 +8,11 @@ the first-party ones.
 
 There are three kinds of plugin, and one distribution may provide more than one:
 
-| Kind | What it does | Entry-point group |
-|---|---|---|
-| connector | reads a path: `detect`, `describe`, `read` | `frontier.connectors` |
-| exporter | carries scripts that run inside the vendor tool (a macro, a journal, a MATLAB package) | `frontier.exporters` |
-| importer | gets data that is not a local file yet: a cloud API, a live solver session, an in-situ stream | `frontier.importers` |
+| Kind      | What it does                                                                                  | Entry-point group     |
+| --------- | --------------------------------------------------------------------------------------------- | --------------------- |
+| connector | reads a path: `detect`, `describe`, `read`                                                    | `frontier.connectors` |
+| exporter  | carries scripts that run inside the vendor tool (a macro, a journal, a MATLAB package)        | `frontier.exporters`  |
+| importer  | gets data that is not a local file yet: a cloud API, a live solver session, an in-situ stream | `frontier.importers`  |
 
 ## A complete connector in one file
 
@@ -145,12 +145,12 @@ code**, so a plugin whose import fails can still be listed, explained and uninst
 
 A plugin gets one of four states:
 
-| State | Meaning | Loaded |
-|---|---|---|
-| `enabled` | manifest valid, compatible, not switched off | yes |
-| `disabled` | switched off in `~/.frontier/plugins.toml` | no |
-| `incompatible` | `data_model_version` has another major version, or a newer minor, than the framework | no |
-| `invalid` | manifest missing, not TOML, a field wrong, or it disagrees with the entry points or the distribution version | no |
+| State          | Meaning                                                                                                      | Loaded |
+| -------------- | ------------------------------------------------------------------------------------------------------------ | ------ |
+| `enabled`      | manifest valid, compatible, not switched off                                                                 | yes    |
+| `disabled`     | switched off in `~/.frontier/plugins.toml`                                                                   | no     |
+| `incompatible` | `data_model_version` has another major version, or a newer minor, than the framework                         | no     |
+| `invalid`      | manifest missing, not TOML, a field wrong, or it disagrees with the entry points or the distribution version | no     |
 
 The compatibility rule: same major version, and your minor not newer than the framework's.
 Minor versions of the dataset format only add things, so an older plugin keeps working.
@@ -190,14 +190,14 @@ that matches nothing raises `SelectionError`.
 Raise the classes in `frontier_connectors.errors`. Every one takes a `hint` that says what
 the user should do next, and the CLI prints it.
 
-| Error | When |
-|---|---|
-| `UnsupportedSourceError` | the path is not yours, or a variant you do not read |
-| `NeedsExportError` | the native file is proprietary: name the exporter script and the command |
-| `MissingDependencyError` | an optional package is needed for this file |
-| `NeedsCredentialsError` | a cloud path without credentials: name the environment variable |
-| `SelectionError` | a zone, field or time selection matched nothing |
-| `MappingError` | a mapping config is missing or ambiguous |
+| Error                    | When                                                                     |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `UnsupportedSourceError` | the path is not yours, or a variant you do not read                      |
+| `NeedsExportError`       | the native file is proprietary: name the exporter script and the command |
+| `MissingDependencyError` | an optional package is needed for this file                              |
+| `NeedsCredentialsError`  | a cloud path without credentials: name the environment variable          |
+| `SelectionError`         | a zone, field or time selection matched nothing                          |
+| `MappingError`           | a mapping config is missing or ambiguous                                 |
 
 ## Dependencies and licences
 
@@ -320,13 +320,13 @@ Pick the level that matches how the connector was validated. `status_note` is pr
 in the support matrix: say what is read, what is not, and the limit of validation in one
 sentence (`Experimental. Not validated against a licensed installation.`).
 
-| Level | Meaning |
-|---|---|
-| `verified-public-sample` | validated on files written by the tool itself |
-| `verified-synthetic` | validated on generated files only |
-| `exporter+reader` | exporter script plus reader; the script is not validated against a licensed installation |
-| `implemented-unverified-live` | cloud or live path; not validated against the live service or a licensed installation |
-| `planned` | a stub |
+| Level                         | Meaning                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `verified-public-sample`      | validated on files written by the tool itself                                            |
+| `verified-synthetic`          | validated on generated files only                                                        |
+| `exporter+reader`             | exporter script plus reader; the script is not validated against a licensed installation |
+| `implemented-unverified-live` | cloud or live path; not validated against the live service or a licensed installation    |
+| `planned`                     | a stub                                                                                   |
 
 ## Testing
 

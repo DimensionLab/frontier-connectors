@@ -21,6 +21,6 @@ ParaView: File > Save Data > CSV (point data). Fluent: File > Export > ASCII, or
 
 Licence: Apache-2.0.
 
-| Optional package | Licence | Used to | Note |
-|---|---|---|---|
-| `pyarrow` | Apache-2.0 | read Parquet |  |
+| Optional package | Licence    | Used to      | Note |
+| ---------------- | ---------- | ------------ | ---- |
+| `pyarrow`        | Apache-2.0 | read Parquet |      |
